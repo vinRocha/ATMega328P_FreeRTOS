@@ -27,7 +27,7 @@
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "task.h"
-#include "serial.h"
+#include "serial/serial.h"
 
 #define serBAUD_DIV_CONSTANT			( ( unsigned long ) 8 )
 
