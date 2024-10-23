@@ -24,7 +24,7 @@
 #include <avr/io.h>
 #include "FreeRTOS.h"
 #include "task.h"
-#include "partest.h"
+#include "digital_io/digital_io.h"
 
 /*-----------------------------------------------------------
  * Simple parallel port IO routines.
