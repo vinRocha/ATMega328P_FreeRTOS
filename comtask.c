@@ -33,7 +33,7 @@
 #include "digital_io/digital_io.h"
 
 #define comBUFFER_LEN                  80
-#define comSTACK_SIZE                  configMINIMAL_STACK_SIZE + (comBUFFER_LEN)
+#define comSTACK_SIZE                  configMINIMAL_STACK_SIZE + (comBUFFER_LEN / 2) + 1
 
 #define comTX_LED_OFFSET               1
 #define comRX_LED_OFFSET               0
