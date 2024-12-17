@@ -52,7 +52,7 @@
 #define portCLEAR_COUNTER_ON_MATCH              ( ( uint8_t ) 0x08 )
 #define portPRESCALE_64                         ( ( uint8_t ) 0x03 )
 #define portCLOCK_PRESCALER                     ( ( uint32_t ) 64 )
-#define portCOMPARE_MATCH_A_INTERRUPT_ENABLE    ( ( uint8_t ) 0x10 )
+#define portCOMPARE_MATCH_A_INTERRUPT_ENABLE    ( ( uint8_t ) 0x02 )
 
 /*-----------------------------------------------------------*/
 
@@ -394,9 +394,9 @@ static void prvSetupTimerInterrupt( void )
 
     /* Enable the interrupt - this is okay as interrupt are currently globally
      * disabled. */
-    ucLowByte = TIMSK;
+    ucLowByte = TIMSK1;
     ucLowByte |= portCOMPARE_MATCH_A_INTERRUPT_ENABLE;
-    TIMSK = ucLowByte;
+    TIMSK1 = ucLowByte;
 }
 /*-----------------------------------------------------------*/
 
