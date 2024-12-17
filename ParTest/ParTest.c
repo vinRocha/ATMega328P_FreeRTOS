@@ -1,6 +1,6 @@
 /*
- * FreeRTOS V202411.00
- * Copyright (C) 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * FreeRTOS V202212.01
+ * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -24,18 +24,7 @@
  *
  */
 
-/* 
-Changes from V2.0.0
-
-	+ Use scheduler suspends in place of critical sections.
-
-Changes from V2.6.0
-
-	+ Replaced the inb() and outb() functions with direct memory
-	  access.  This allows the port to be built with the 20050414 build of
-	  WinAVR.
-*/
-
+#include <avr/io.h>
 #include "FreeRTOS.h"
 #include "task.h"
 #include "partest.h"
@@ -45,20 +34,24 @@ Changes from V2.6.0
  *-----------------------------------------------------------*/
 
 #define partstALL_BITS_OUTPUT			( ( unsigned char ) 0xff )
-#define partstALL_OUTPUTS_OFF			( ( unsigned char ) 0xff )
+#define partstALL_OUTPUTS_OFF			( ( unsigned char ) 0x00 ) //Activate in high.
 #define partstMAX_OUTPUT_LED			( ( unsigned char ) 7 )
 
-static volatile unsigned char ucCurrentOutputValue = partstALL_OUTPUTS_OFF; /*lint !e956 File scope parameters okay here. */
 
 /*-----------------------------------------------------------*/
 
 void vParTestInitialise( void )
 {
-	ucCurrentOutputValue = partstALL_OUTPUTS_OFF;
+	/* PORTD0..1 are used as RX/TX for serial comunication.
+	 * PORTD2..7 and PORTB4..5 will be used for LED output.
+	 * These corresponds to Digital 2..7 - 12..13 in Arduino UNO R3 board. */
+	/* Bitwise 'or' to set specific bits and Bitwise 'and not' to reset */
+	
+	DDRB |= 0x30;
+	PORTB &= ~0x30;
 
-	/* Set port B direction to outputs.  Start with all output off. */
-	DDRB = partstALL_BITS_OUTPUT;
-	PORTB = ucCurrentOutputValue;
+	DDRD |= 0xfc;
+	PORTD &= ~0xfc;
 }
 /*-----------------------------------------------------------*/
 
@@ -68,21 +61,24 @@ unsigned char ucBit = ( unsigned char ) 1;
 
 	if( uxLED <= partstMAX_OUTPUT_LED )
 	{
-		ucBit <<= uxLED;	
+		/* LEDs 0..5 need to have index increased by 2, as they correspond to PORTD register */
+		/* LEDs 6..7 need to have index decreased by 2, as they correspond to PORTD register */
+		if (uxLED < 6) ucBit <<= (uxLED + 2);
+		else ucBit <<= (uxLED - 2);
 
 		vTaskSuspendAll();
 		{
 			if( xValue == pdTRUE )
 			{
-				ucBit ^= ( unsigned char ) 0xff;
-				ucCurrentOutputValue &= ucBit;
+				if (uxLED < 6) PORTD |= (ucBit);
+		        else PORTB |= (ucBit);
 			}
 			else
 			{
-				ucCurrentOutputValue |= ucBit;
-			}
+				if (uxLED < 6) PORTD &= ~(ucBit);
+				else PORTB &= ~(ucBit);
 
-			PORTB = ucCurrentOutputValue;
+			}
 		}
 		xTaskResumeAll();
 	}
@@ -91,27 +87,40 @@ unsigned char ucBit = ( unsigned char ) 1;
 
 void vParTestToggleLED( unsigned portBASE_TYPE uxLED )
 {
-unsigned char ucBit;
+unsigned char ucBit = ( unsigned char ) 1;
 
 	if( uxLED <= partstMAX_OUTPUT_LED )
 	{
-		ucBit = ( ( unsigned char ) 1 ) << uxLED;
-
-		vTaskSuspendAll();
+		if (uxLED < 6) {
+			ucBit <<= (uxLED + 2);
+	        vTaskSuspendAll();
+		    {
+		    	if( (PORTD & ucBit) )
+		    	{
+		    		PORTD &= ~(ucBit);
+		    	}
+		    	else
+		    	{
+		    		PORTD |= (ucBit);
+		    	}
+		    }
+		    xTaskResumeAll();
+		} 
+		else 
 		{
-			if( ucCurrentOutputValue & ucBit )
-			{
-				ucCurrentOutputValue &= ~ucBit;
-			}
-			else
-			{
-				ucCurrentOutputValue |= ucBit;
-			}
-
-			PORTB = ucCurrentOutputValue;
+		     ucBit <<= (uxLED - 2);
+		     vTaskSuspendAll();
+		     {
+		     	if( (PORTB & ucBit) )
+		     	{
+		     		PORTB &= ~(ucBit);
+		     	}
+		     	else
+		     	{
+		     		PORTB |= (ucBit);
+		     	}
+		     }
+		     xTaskResumeAll();
 		}
-		xTaskResumeAll();			
 	}
 }
-
-

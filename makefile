@@ -31,7 +31,7 @@
 
 
 # MCU name
-MCU = atmega323
+MCU = atmega328p
 
 # Output format. (can be srec, ihex, binary)
 FORMAT = ihex
@@ -45,9 +45,9 @@ OPT = s
 
 
 # List C source files here. (C dependencies are automatically generated.)
-DEMO_DIR = ../Common/Minimal
-SOURCE_DIR = ../../Source
-PORT_DIR = ../../Source/portable/GCC/ATMega323
+DEMO_DIR = ../Demo/Common/Minimal
+SOURCE_DIR = ../Source
+PORT_DIR = ../Source/portable/GCC/ATMega328P
 
 SRC	= \
 main.c \
@@ -103,7 +103,7 @@ DEBUG_LEVEL=-g
 WARNINGS=-Wall -Wextra -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wsign-compare \
 		-Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wunused
 
-CFLAGS = -D GCC_MEGA_AVR -I. -I../../Source/include -I../Common/include  \
+CFLAGS = -I. -I../Source/include -I../Demo/Common/include -I$(PORT_DIR)  \
 $(DEBUG_LEVEL) -O$(OPT) \
 -fsigned-char -funsigned-bitfields -fpack-struct -fshort-enums \
 $(WARNINGS) \

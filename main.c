@@ -77,10 +77,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef GCC_MEGA_AVR
-    /* EEPROM routines used only with the WinAVR compiler. */
-    #include <avr/eeprom.h>
-#endif
+#include <avr/eeprom.h>
 
 /* Scheduler include files. */
 #include "FreeRTOS.h"

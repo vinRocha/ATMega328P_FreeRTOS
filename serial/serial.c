@@ -1,6 +1,6 @@
 /*
- * FreeRTOS V202411.00
- * Copyright (C) 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * FreeRTOS V202212.01
+ * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -24,29 +24,7 @@
  *
  */
 
-/*
-Changes from V1.2.3
-
-	+ The function xPortInitMinimal() has been renamed to 
-	  xSerialPortInitMinimal() and the function xPortInit() has been renamed
-	  to xSerialPortInit().
-
-Changes from V2.0.0
-
-	+ Delay periods are now specified using variables and constants of
-	  TickType_t rather than unsigned long.
-	+ xQueueReceiveFromISR() used in place of xQueueReceive() within the ISR.
-
-Changes from V2.6.0
-
-	+ Replaced the inb() and outb() functions with direct memory
-	  access.  This allows the port to be built with the 20050414 build of
-	  WinAVR.
-*/
-
 /* BASIC INTERRUPT DRIVEN SERIAL PORT DRIVER. */
-
-
 #include <stdlib.h>
 #include <avr/interrupt.h>
 #include "FreeRTOS.h"
@@ -54,7 +32,7 @@ Changes from V2.6.0
 #include "task.h"
 #include "serial.h"
 
-#define serBAUD_DIV_CONSTANT			( ( unsigned long ) 16 )
+#define serBAUD_DIV_CONSTANT			( ( unsigned long ) 8 )
 
 /* Constants for writing to UCSRB. */
 #define serRX_INT_ENABLE				( ( unsigned char ) 0x80 )
@@ -66,33 +44,32 @@ Changes from V2.6.0
 #define serUCSRC_SELECT					( ( unsigned char ) 0x80 )
 #define serEIGHT_DATA_BITS				( ( unsigned char ) 0x06 )
 
-static QueueHandle_t xRxedChars; 
-static QueueHandle_t xCharsForTx; 
+static QueueHandle_t xRxedChars;
+static QueueHandle_t xCharsForTx;
 
 #define vInterruptOn()										\
 {															\
 	unsigned char ucByte;								\
 															\
-	ucByte = UCSRB;											\
+	ucByte = UCSR0B;											\
 	ucByte |= serTX_INT_ENABLE;								\
-	UCSRB = ucByte;											\
-}																				
+	UCSR0B = ucByte;											\
+}
 /*-----------------------------------------------------------*/
 
 #define vInterruptOff()										\
 {															\
 	unsigned char ucInByte;								\
 															\
-	ucInByte = UCSRB;										\
+	ucInByte = UCSR0B;										\
 	ucInByte &= ~serTX_INT_ENABLE;							\
-	UCSRB = ucInByte;										\
+	UCSR0B = ucInByte;										\
 }
 /*-----------------------------------------------------------*/
 
-xComPortHandle xSerialPortInitMinimal( unsigned long ulWantedBaud, unsigned portBASE_TYPE uxQueueLength )
-{
-unsigned long ulBaudRateCounter;
-unsigned char ucByte;
+xComPortHandle xSerialPortInitMinimal(unsigned long ulWantedBaud, unsigned portBASE_TYPE uxQueueLength) {
+	unsigned long ulBaudRateCounter;
+	unsigned char ucByte;
 
 	portENTER_CRITICAL();
 	{
@@ -102,25 +79,36 @@ unsigned char ucByte;
 
 		/* Calculate the baud rate register value from the equation in the
 		data sheet. */
-		ulBaudRateCounter = ( configCPU_CLOCK_HZ / ( serBAUD_DIV_CONSTANT * ulWantedBaud ) ) - ( unsigned long ) 1;
+        if ( ulWantedBaud < 57601) {
+            ulBaudRateCounter = ( configCPU_CLOCK_HZ / ( serBAUD_DIV_CONSTANT * ulWantedBaud * 2 ) ) - ( unsigned long ) 1;
+        }
+        else {
+            ulBaudRateCounter = ( configCPU_CLOCK_HZ / ( serBAUD_DIV_CONSTANT * ulWantedBaud ) ) - ( unsigned long ) 1;
+        }
 
-		/* Set the baud rate. */	
-		ucByte = ( unsigned char ) ( ulBaudRateCounter & ( unsigned long ) 0xff );	
-		UBRRL = ucByte;
+		/* Set the baud rate. */
+		ucByte = ( unsigned char ) ( ulBaudRateCounter & ( unsigned long ) 0xff );
+		UBRR0L = ucByte;
 
 		ulBaudRateCounter >>= ( unsigned long ) 8;
-		ucByte = ( unsigned char ) ( ulBaudRateCounter & ( unsigned long ) 0xff );	
-		UBRRH = ucByte;
+		ucByte = ( unsigned char ) ( ulBaudRateCounter & ( unsigned long ) 0xff );
+		UBRR0H = ucByte;
+
+		/* Enable Double Speed Operation for 115200 baudrate*/
+        if (ulWantedBaud > 57601) {
+            ucByte = (1 << U2X0);
+            UCSR0A |= ucByte;
+        }
 
 		/* Enable the Rx interrupt.  The Tx interrupt will get enabled
 		later. Also enable the Rx and Tx. */
-		UCSRB = ( serRX_INT_ENABLE | serRX_ENABLE | serTX_ENABLE );
+		UCSR0B = ( serRX_INT_ENABLE | serRX_ENABLE | serTX_ENABLE );
 
 		/* Set the data bits to 8. */
-		UCSRC = ( serUCSRC_SELECT | serEIGHT_DATA_BITS );
+		UCSR0C = ( serUCSRC_SELECT | serEIGHT_DATA_BITS );
 	}
 	portEXIT_CRITICAL();
-	
+
 	/* Unlike other ports, this serial code does not allow for more than one
 	com port.  We therefore don't return a pointer to a port structure and can
 	instead just return NULL. */
@@ -128,32 +116,26 @@ unsigned char ucByte;
 }
 /*-----------------------------------------------------------*/
 
-signed portBASE_TYPE xSerialGetChar( xComPortHandle pxPort, signed char *pcRxedChar, TickType_t xBlockTime )
-{
+signed portBASE_TYPE xSerialGetChar(xComPortHandle pxPort, signed char *pcRxedChar, TickType_t xBlockTime) {
 	/* Only one port is supported. */
-	( void ) pxPort;
+	(void) pxPort;
 
 	/* Get the next character from the buffer.  Return false if no characters
-	are available, or arrive before xBlockTime expires. */
-	if( xQueueReceive( xRxedChars, pcRxedChar, xBlockTime ) )
-	{
+	are available, or arrive after xBlockTime expires. */
+	if (xQueueReceive(xRxedChars, pcRxedChar, xBlockTime)) {
 		return pdTRUE;
 	}
-	else
-	{
+	else {
 		return pdFALSE;
 	}
 }
 /*-----------------------------------------------------------*/
 
-signed portBASE_TYPE xSerialPutChar( xComPortHandle pxPort, signed char cOutChar, TickType_t xBlockTime )
-{
-	/* Only one port is supported. */
-	( void ) pxPort;
+signed portBASE_TYPE xSerialPutChar(xComPortHandle pxPort, signed char cOutChar, TickType_t xBlockTime) {
+	(void) pxPort;
 
 	/* Return false if after the block time there is no room on the Tx queue. */
-	if( xQueueSend( xCharsForTx, &cOutChar, xBlockTime ) != pdPASS )
-	{
+	if (xQueueSend(xCharsForTx, &cOutChar, xBlockTime ) != pdPASS) {
 		return pdFAIL;
 	}
 
@@ -163,12 +145,11 @@ signed portBASE_TYPE xSerialPutChar( xComPortHandle pxPort, signed char cOutChar
 }
 /*-----------------------------------------------------------*/
 
-void vSerialClose( xComPortHandle xPort )
-{
-unsigned char ucByte;
+void vSerialClose(xComPortHandle xPort) {
+	unsigned char ucByte;
 
 	/* The parameter is not used. */
-	( void ) xPort;
+	(void) xPort;
 
 	/* Turn off the interrupts.  We may also want to delete the queues and/or
 	re-install the original ISR. */
@@ -176,46 +157,40 @@ unsigned char ucByte;
 	portENTER_CRITICAL();
 	{
 		vInterruptOff();
-		ucByte = UCSRB;
+		ucByte = UCSR0B;
 		ucByte &= ~serRX_INT_ENABLE;
-		UCSRB = ucByte;
+		UCSR0B = ucByte;
 	}
 	portEXIT_CRITICAL();
 }
 /*-----------------------------------------------------------*/
 
-SIGNAL( USART_RXC_vect )
-{
-signed char cChar;
-signed portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+SIGNAL(USART_RX_vect) {
+	signed char cChar;
+	signed portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
 
 	/* Get the character and post it on the queue of Rxed characters.
 	If the post causes a task to wake force a context switch as the woken task
 	may have a higher priority than the task we have interrupted. */
-	cChar = UDR;
+	cChar = UDR0;
 
-	xQueueSendFromISR( xRxedChars, &cChar, &xHigherPriorityTaskWoken );
+	xQueueSendFromISR(xRxedChars, &cChar, &xHigherPriorityTaskWoken);
 
-	if( xHigherPriorityTaskWoken != pdFALSE )
-	{
+	if (xHigherPriorityTaskWoken != pdFALSE) {
 		taskYIELD();
 	}
 }
 /*-----------------------------------------------------------*/
 
-SIGNAL( USART_UDRE_vect )
-{
-signed char cChar, cTaskWoken;
+SIGNAL(USART_UDRE_vect) {
+	signed char cChar, cTaskWoken;
 
-	if( xQueueReceiveFromISR( xCharsForTx, &cChar, &cTaskWoken ) == pdTRUE )
-	{
+	if (xQueueReceiveFromISR(xCharsForTx, &cChar, &cTaskWoken) == pdTRUE) {
 		/* Send the next character queued for Tx. */
-		UDR = cChar;
+		UDR0 = cChar;
 	}
-	else
-	{
+	else {
 		/* Queue empty, nothing to send. */
 		vInterruptOff();
 	}
 }
-
