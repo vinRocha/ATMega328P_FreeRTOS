@@ -1,3 +1,4 @@
+/*
  * MIT License
  * Copyright (c) 2024 Vinicius Silva.  All Rights Reserved.
  *
@@ -43,7 +44,7 @@
 #define configCPU_CLOCK_HZ			( ( unsigned long ) 16000000 )
 #define configTICK_RATE_HZ			( ( TickType_t ) 1000 )
 #define configMAX_PRIORITIES		( 4 )
-#define configMINIMAL_STACK_SIZE	( ( unsigned short ) 85 )
+#define configMINIMAL_STACK_SIZE	( ( unsigned short ) 96 )
 #define configTOTAL_HEAP_SIZE		( (size_t ) ( 1500 ) )
 #define configMAX_TASK_NAME_LEN		( 8 )
 #define configUSE_TRACE_FACILITY	0
@@ -52,7 +53,7 @@
 #define configQUEUE_REGISTRY_SIZE	0
 
 /* Co-routine definitions. */
-#define configUSE_CO_ROUTINES 		1
+#define configUSE_CO_ROUTINES 		0
 #define configMAX_CO_ROUTINE_PRIORITIES ( 2 )
 
 /* Set the following definitions to 1 to include the API function, or zero
