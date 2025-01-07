@@ -51,19 +51,14 @@ PORT_DIR = ./portable/GCC/ATMega328P
 
 SRC	= \
 main.c \
-ParTest/ParTest.c \
+digital_io/digital_io.c \
 serial/serial.c \
-regtest.c \
+comtask.c \
 $(SOURCE_DIR)/tasks.c \
 $(SOURCE_DIR)/queue.c \
 $(SOURCE_DIR)/list.c \
-$(SOURCE_DIR)/croutine.c \
 $(SOURCE_DIR)/portable/MemMang/heap_1.c \
 $(PORT_DIR)/port.c \
-$(DEMO_DIR)/crflash.c \
-$(DEMO_DIR)/integer.c \
-$(DEMO_DIR)/PollQ.c \
-$(DEMO_DIR)/comtest.c
 
 
 # If there is more than one source file, append them above, or modify and
@@ -103,7 +98,7 @@ DEBUG_LEVEL=-g
 WARNINGS=-Wall -Wextra -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wsign-compare \
 		-Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wunused
 
-CFLAGS = -I. -I../Source/include -I../Demo/Common/include -I$(PORT_DIR)  \
+CFLAGS = -I. -I../Source/include -I$(PORT_DIR)  \
 $(DEBUG_LEVEL) -O$(OPT) \
 -fsigned-char -funsigned-bitfields -fpack-struct -fshort-enums \
 $(WARNINGS) \
