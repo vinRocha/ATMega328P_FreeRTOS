@@ -27,7 +27,7 @@
 #include "sensor_task.h"
 #include "drivers/digital_io.h"
 
-#define mSTACK_SIZE                  configMINIMAL_STACK_SIZE + 64
+#define mSTACK_SIZE                  configMINIMAL_STACK_SIZE + 32
 
 #define mNO_BLOCK                    (TickType_t) 0
 #define m500_MS                      (TickType_t) (500 / portTICK_PERIOD_MS)
@@ -58,7 +58,7 @@ void vSensorTask(void *pvParameters) {
         while(!(PINB & ECHO_PIN) && (timeout < 10000)) {
             timeout++;
         }
-        while((PINB & ECHO_PIN)) {
+        while((PINB & ECHO_PIN) && (interval < 10000)) {
             delayMicrosecond(1);
             interval += 1;
         }

@@ -61,7 +61,7 @@ static portTASK_FUNCTION(vComTxTask, pvParameters) {
 
     for (;;) {
         if (xQueueReceive(dataQueue, &distance, com500_MS_DELAY)) {
-            snprintf(msg, comBUFFER_LEN, "distance: %.3f\r\n", distance);
+            snprintf(msg, comBUFFER_LEN, "distance: %6.3f\r\n", distance);
             for (int i = 0; msg[i]; i++) {
                 xSerialPutChar(NULL, msg[i], comNO_BLOCK);
             }
