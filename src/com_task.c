@@ -24,22 +24,19 @@
 #include <stdio.h>
 #include "FreeRTOS.h"
 #include "task.h"
+#include "queue.h"
 
-#include "comtask.h"
-#include "serial/serial.h"
-#include "digital_io/digital_io.h"
+#include "com_task.h"
+#include "drivers/serial.h"
 
-#define comBUFFER_LEN                  80
-#define comSTACK_SIZE                  configMINIMAL_STACK_SIZE + (comBUFFER_LEN / 2) + 1
+#define comBUFFER_LEN                  20
+#define comSTACK_SIZE                  configMINIMAL_STACK_SIZE + (comBUFFER_LEN / 2) + 16
 
-#define comTX_LED_OFFSET               1
 #define comRX_LED_OFFSET               0
+#define comTX_LED_OFFSET               1
 
 #define comNO_BLOCK                    (TickType_t) 0
-#define com2000_MS_DELAY               (TickType_t) (2000 / portTICK_PERIOD_MS)
-
-/* We only support one UART */
-static xComPortHandle xPort = NULL;
+#define com500_MS_DELAY               (TickType_t) (500 / portTICK_PERIOD_MS)
 
 /* The transmit task */
 static portTASK_FUNCTION_PROTO(vComTxTask, pvParameters);
@@ -47,30 +44,28 @@ static portTASK_FUNCTION_PROTO(vComTxTask, pvParameters);
 /* The LED that should be toggled by the Rx and Tx tasks.  The Rx task will
  * toggle LED ( uxBaseLED + comRX_LED_OFFSET).  The Tx task will toggle LED
  * ( uxBaseLED + comTX_LED_OFFSET ). */
-static UBaseType_t uxBaseLED = 0;
+//static UBaseType_t uxBaseLED = 0;
 
-void prvStartComTask(UBaseType_t uxPriority, unsigned long ulBaudRate) {
+void prvStartComTask(UBaseType_t uxPriority, unsigned long ulBaudRate, QueueHandle_t dataQueue) {
     xSerialPortInitMinimal(ulBaudRate, comBUFFER_LEN);
-    xTaskCreate(vComTxTask, "COMTx", comSTACK_SIZE, NULL, uxPriority, (TaskHandle_t *) NULL);
+    xTaskCreate(vComTxTask, "COMTx", comSTACK_SIZE, (void*) dataQueue, uxPriority, (TaskHandle_t *) NULL);
 }
 /*-----------------------------------------------------------*/
 
 static portTASK_FUNCTION(vComTxTask, pvParameters) {
-    size_t heapFree;
-    char line[comBUFFER_LEN] = {0};
-
-    /* Just to stop compiler warnings. */
-    (void) pvParameters;
+    //distance: 00.000
+    char msg[comBUFFER_LEN];
+ 
+    float distance;
+    QueueHandle_t dataQueue = (QueueHandle_t)pvParameters;
 
     for (;;) {
-        heapFree = xPortGetFreeHeapSize();
-        snprintf(line, comBUFFER_LEN, "FreeHeapSize: %d\r\n", heapFree);
-
-        for(int i = 0; line[i]; i++) {
-            xSerialPutChar(xPort, line[i], comNO_BLOCK);
+        if (xQueueReceive(dataQueue, &distance, com500_MS_DELAY)) {
+            snprintf(msg, comBUFFER_LEN, "distance: %.3f\r\n", distance);
+            for (int i = 0; msg[i]; i++) {
+                xSerialPutChar(NULL, msg[i], comNO_BLOCK);
+            }
         }
-
-        vTaskDelay(com2000_MS_DELAY);
     }
 }
 /*-----------------------------------------------------------*/

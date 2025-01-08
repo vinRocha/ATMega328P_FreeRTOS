@@ -21,18 +21,17 @@
  *
  */
 
-#include <avr/eeprom.h>
 #include "FreeRTOS.h"
 #include "task.h"
-#include "digital_io/digital_io.h"
-#include "comtask.h"
+#include "queue.h"
+#include "drivers/digital_io.h"
+#include "com_task.h"
+#include "sensor_task.h"
 
 /* Priority definitions for most of the tasks in the demo application.  Some
 tasks just use the idle priority. */
-#define mainQUEUE_POLL_PRIORITY			(tskIDLE_PRIORITY + 1)
-#define mainCHECK_TASK_PRIORITY			(tskIDLE_PRIORITY + 2)
-#define mainLED_TASK_PRIORITY			(tskIDLE_PRIORITY + 2)
-#define mainCOM_TASK_PRIORITY			(tskIDLE_PRIORITY + 3)
+#define mainCOM_TASK_PRIORITY			(tskIDLE_PRIORITY + 1)
+#define mainSENSOR_TASK_PRIORITY		(tskIDLE_PRIORITY + 2)
 
 /* Baud rate used by the serial port tasks. */
 #define mainCOM_BAUD_RATE			(unsigned long) 115200
@@ -52,10 +51,15 @@ void vApplicationIdleHook(void);
 
 short main(void) {
 	/* Initialize Digital IO ports */
-    vParTestInitialise();
+    digitalIOInitialise();
 
-	/* Create comtask*/
-	prvStartComTask(mainCOM_TASK_PRIORITY, mainCOM_BAUD_RATE);
+    /* dataQueue to share data between sensor and com tasks */
+    QueueHandle_t dataQueue = xQueueCreate(5, sizeof(float));
+
+    /* Create sensor task */
+    prvStartSensorTask(mainSENSOR_TASK_PRIORITY, dataQueue);
+	/* Create com task*/
+	prvStartComTask(mainCOM_TASK_PRIORITY, mainCOM_BAUD_RATE, dataQueue);
 
 	/* Start Tasks*/
 	vTaskStartScheduler();
@@ -68,7 +72,7 @@ short main(void) {
 void vApplicationIdleHook(void) {
 	volatile unsigned long ul; /* volatile so it is not optimized away. */
 
-	vParTestToggleLED(mainARDUINO_BUILTIN_LED);
+	digitalIOToggle(mainARDUINO_BUILTIN_LED);
 	for( ul = 0; ul < 0xfffff; ul++ ) {} //some delay
 
 	/*This function must return;*/

@@ -45,15 +45,15 @@ OPT = s
 
 
 # List C source files here. (C dependencies are automatically generated.)
-DEMO_DIR = ../Demo/Common/Minimal
 SOURCE_DIR = ../Source
 PORT_DIR = ./portable/GCC/ATMega328P
 
 SRC	= \
-main.c \
-digital_io/digital_io.c \
-serial/serial.c \
-comtask.c \
+src/main.c \
+src/com_task.c \
+src/sensor_task.c \
+src/drivers/digital_io.c \
+src/drivers/serial.c \
 $(SOURCE_DIR)/tasks.c \
 $(SOURCE_DIR)/queue.c \
 $(SOURCE_DIR)/list.c \
@@ -98,7 +98,7 @@ DEBUG_LEVEL=-g
 WARNINGS=-Wall -Wextra -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wsign-compare \
 		-Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wunused
 
-CFLAGS = -I. -I../Source/include -I$(PORT_DIR)  \
+CFLAGS = -I./include -I../Source/include -I$(PORT_DIR) -Wl,-u,vfprintf -lprintf_flt -lm  \
 $(DEBUG_LEVEL) -O$(OPT) \
 -fsigned-char -funsigned-bitfields -fpack-struct -fshort-enums \
 $(WARNINGS) \

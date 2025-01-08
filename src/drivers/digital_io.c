@@ -24,42 +24,43 @@
 #include <avr/io.h>
 #include "FreeRTOS.h"
 #include "task.h"
-#include "digital_io/digital_io.h"
+#include "drivers/digital_io.h"
 
 /*-----------------------------------------------------------
  * Simple parallel port IO routines.
  *-----------------------------------------------------------*/
-
-#define partstALL_BITS_OUTPUT			( ( unsigned char ) 0xff )
-#define partstALL_OUTPUTS_OFF			( ( unsigned char ) 0x00 ) //Activate in high.
-#define partstMAX_OUTPUT_LED			( ( unsigned char ) 7 )
+#define digitalIO_MAX_OUTPUT			( ( unsigned char ) 7 )
 
 
 /*-----------------------------------------------------------*/
 
-void vParTestInitialise( void )
+void digitalIOInitialise( void )
 {
 	/* PORTD0..1 are used as RX/TX for serial comunication.
 	 * PORTD2..7 and PORTB4..5 will be used for LED output.
 	 * These corresponds to Digital 2..7 - 12..13 in Arduino UNO R3 board. */
 	/* Bitwise 'or' to set specific bits and Bitwise 'and not' to reset */
-	
-	DDRB |= 0x30;
-	PORTB &= ~0x30;
 
+    /* Set PORTB 4..5 as output and to low logic level */
+    /* Set PORTB 0..3 as input without pull-up resistor */
+	PORTB &= ~0x3f;
+	DDRB |= 0x30;
+    DDRB &= 0xf0;
+
+    /* Set PORTD 2..7 as output and to low logic level */
 	DDRD |= 0xfc;
 	PORTD &= ~0xfc;
 }
 /*-----------------------------------------------------------*/
 
-void vParTestSetLED( unsigned portBASE_TYPE uxLED, signed portBASE_TYPE xValue )
+void digitalIOSet( unsigned portBASE_TYPE uxLED, signed portBASE_TYPE xValue )
 {
 unsigned char ucBit = ( unsigned char ) 1;
 
-	if( uxLED <= partstMAX_OUTPUT_LED )
+	if( uxLED <= digitalIO_MAX_OUTPUT )
 	{
-		/* LEDs 0..5 need to have index increased by 2, as they correspond to PORTD register */
-		/* LEDs 6..7 need to have index decreased by 2, as they correspond to PORTD register */
+		/* DIOs 0..5 need to have index increased by 2, as they correspond to PORTD register */
+		/* DIOs 6..7 need to have index decreased by 2, as they correspond to PORTD register */
 		if (uxLED < 6) ucBit <<= (uxLED + 2);
 		else ucBit <<= (uxLED - 2);
 
@@ -82,11 +83,11 @@ unsigned char ucBit = ( unsigned char ) 1;
 }
 /*-----------------------------------------------------------*/
 
-void vParTestToggleLED( unsigned portBASE_TYPE uxLED )
+void digitalIOToggle( unsigned portBASE_TYPE uxLED )
 {
 unsigned char ucBit = ( unsigned char ) 1;
 
-	if( uxLED <= partstMAX_OUTPUT_LED )
+	if( uxLED <= digitalIO_MAX_OUTPUT )
 	{
 		if (uxLED < 6) {
 			ucBit <<= (uxLED + 2);
