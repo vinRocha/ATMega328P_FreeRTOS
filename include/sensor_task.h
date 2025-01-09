@@ -24,6 +24,6 @@
 #ifndef SENSOR_TASK_H
 #define SENSOR_TASK_H
 
-void prvStartSensorTask(UBaseType_t uxPriority, QueueHandle_t dataQueue);
+void prvStartSensorTask(UBaseType_t uxPriority, QueueHandle_t dataQueue, char taskLED);
 
 #endif

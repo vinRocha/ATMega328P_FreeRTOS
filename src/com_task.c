@@ -28,42 +28,41 @@
 
 #include "com_task.h"
 #include "drivers/serial.h"
+#include "drivers/digital_io.h"
 
-#define comBUFFER_LEN                  20
-#define comSTACK_SIZE                  configMINIMAL_STACK_SIZE + (comBUFFER_LEN / 2) + 16
+#define serialBUFFER_LEN                16
+#define mBUFFER_LEN                     20
+#define mSTACK_SIZE                     configMINIMAL_STACK_SIZE + mBUFFER_LEN * 2
 
-#define comRX_LED_OFFSET               0
-#define comTX_LED_OFFSET               1
+#define mNO_BLOCK                       (TickType_t) 0
+#define mDELAY_MS(x)                    (TickType_t) (x / portTICK_PERIOD_MS)
 
-#define comNO_BLOCK                    (TickType_t) 0
-#define com500_MS_DELAY               (TickType_t) (500 / portTICK_PERIOD_MS)
+static void vComTxTask(void *pvParameters);
+static char mLED;
 
-/* The transmit task */
-static portTASK_FUNCTION_PROTO(vComTxTask, pvParameters);
+void prvStartComTask(UBaseType_t uxPriority, unsigned long ulBaudRate,
+        QueueHandle_t dataQueue, char taskLED) {
 
-/* The LED that should be toggled by the Rx and Tx tasks.  The Rx task will
- * toggle LED ( uxBaseLED + comRX_LED_OFFSET).  The Tx task will toggle LED
- * ( uxBaseLED + comTX_LED_OFFSET ). */
-//static UBaseType_t uxBaseLED = 0;
-
-void prvStartComTask(UBaseType_t uxPriority, unsigned long ulBaudRate, QueueHandle_t dataQueue) {
-    xSerialPortInitMinimal(ulBaudRate, comBUFFER_LEN);
-    xTaskCreate(vComTxTask, "COMTx", comSTACK_SIZE, (void*) dataQueue, uxPriority, (TaskHandle_t *) NULL);
+    mLED = taskLED;
+    xSerialPortInitMinimal(ulBaudRate, serialBUFFER_LEN);
+    xTaskCreate(vComTxTask, "COMTx", mSTACK_SIZE, (void*) dataQueue, uxPriority, NULL);
 }
 /*-----------------------------------------------------------*/
 
 static portTASK_FUNCTION(vComTxTask, pvParameters) {
+ 
     //distance: 00.000
-    char msg[comBUFFER_LEN];
+    char msg[mBUFFER_LEN];
  
     float distance;
     QueueHandle_t dataQueue = (QueueHandle_t)pvParameters;
 
     for (;;) {
-        if (xQueueReceive(dataQueue, &distance, com500_MS_DELAY)) {
-            snprintf(msg, comBUFFER_LEN, "distance: %6.3f\r\n", distance);
+        digitalIOToggle(mLED);
+        if (xQueueReceive(dataQueue, &distance, mDELAY_MS(200))) {
+            snprintf(msg, mBUFFER_LEN, "distance: %6.3f\r\n", distance);
             for (int i = 0; msg[i]; i++) {
-                xSerialPutChar(NULL, msg[i], comNO_BLOCK);
+                xSerialPutChar(NULL, msg[i], mNO_BLOCK);
             }
         }
     }

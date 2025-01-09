@@ -24,6 +24,7 @@
 #ifndef COM_TASK_H
 #define COM_TASK_H
 
-void prvStartComTask(UBaseType_t uxPriority, unsigned long ulBaudRate, QueueHandle_t dataQueue);
+void prvStartComTask(UBaseType_t uxPriority, unsigned long ulBaudRate,
+        QueueHandle_t dataQueue, char taskLED);
 
 #endif

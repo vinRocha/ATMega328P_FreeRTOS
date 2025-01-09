@@ -24,57 +24,46 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
-#include "drivers/digital_io.h"
 #include "com_task.h"
 #include "sensor_task.h"
+#include "drivers/digital_io.h"
 
-/* Priority definitions for most of the tasks in the demo application.  Some
-tasks just use the idle priority. */
-#define mainCOM_TASK_PRIORITY			(tskIDLE_PRIORITY + 1)
-#define mainSENSOR_TASK_PRIORITY		(tskIDLE_PRIORITY + 2)
+/* Priority definitions for tasks */
+#define mCOM_TASK_PRIORITY              (tskIDLE_PRIORITY + 1)
+#define mSENSOR_TASK_PRIORITY           (tskIDLE_PRIORITY + 2)
 
-/* Baud rate used by the serial port tasks. */
-#define mainCOM_BAUD_RATE			(unsigned long) 115200
+/* Baud rate used by the serial port. */
+#define mCOM_BAUD_RATE                  (unsigned long) 115200
 
-/* LED that is toggled by the check task.  The check task periodically checks
-that all the other tasks are operating without error.  If no errors are found
-the LED is toggled.  If an error is found at any time the LED is never toggles
-again. */
-#define mainCHECK_TASK_LED				0
-#define mainARDUINO_BUILTIN_LED			7
+#define mARDUINO_BUILTIN_LED            7
+#define mSENSOR_TASK_LED                0
+#define mCOM_TASK_LED                   1
 
 /* The period between executions of the check task. */
-#define main500_MS_DELAY				((TickType_t) 500 / portTICK_PERIOD_MS)
-#define main3000_MS_DELAY				((TickType_t) 3000 / portTICK_PERIOD_MS)
+#define mDELAY_MS(x)                    (TickType_t) (x / portTICK_PERIOD_MS)
 
 void vApplicationIdleHook(void);
 
 short main(void) {
-	/* Initialize Digital IO ports */
+    /* Initialize Digital IO ports */
     digitalIOInitialise();
 
     /* dataQueue to share data between sensor and com tasks */
     QueueHandle_t dataQueue = xQueueCreate(5, sizeof(float));
 
     /* Create sensor task */
-    prvStartSensorTask(mainSENSOR_TASK_PRIORITY, dataQueue);
-	/* Create com task*/
-	prvStartComTask(mainCOM_TASK_PRIORITY, mainCOM_BAUD_RATE, dataQueue);
+    prvStartSensorTask(mSENSOR_TASK_PRIORITY, dataQueue, mSENSOR_TASK_LED);
+    /* Create com task*/
+    prvStartComTask(mCOM_TASK_PRIORITY, mCOM_BAUD_RATE, dataQueue, mCOM_TASK_LED);
 
-	/* Start Tasks*/
-	vTaskStartScheduler();
+    /* Start Tasks*/
+    vTaskStartScheduler();
 
     //should never reach here.
-	return 0;
+    return 0;
 }
 /*-----------------------------------------------------------*/
 
 void vApplicationIdleHook(void) {
-	volatile unsigned long ul; /* volatile so it is not optimized away. */
-
-	digitalIOToggle(mainARDUINO_BUILTIN_LED);
-	for( ul = 0; ul < 0xfffff; ul++ ) {} //some delay
-
-	/*This function must return;*/
-	return;
+    /*This function must return;*/
 }

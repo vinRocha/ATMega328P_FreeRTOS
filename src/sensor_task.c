@@ -27,19 +27,22 @@
 #include "sensor_task.h"
 #include "drivers/digital_io.h"
 
-#define mSTACK_SIZE                  configMINIMAL_STACK_SIZE + 32
+#define mSTACK_SIZE                     configMINIMAL_STACK_SIZE + 32
 
-#define mNO_BLOCK                    (TickType_t) 0
-#define m500_MS                      (TickType_t) (500 / portTICK_PERIOD_MS)
+#define mNO_BLOCK                       (TickType_t) 0
+#define mDELAY_MS(x)                    (TickType_t) (x / portTICK_PERIOD_MS)
 
-#define TRIG_PIN    6    //PORTB bit 4;
-#define ECHO_PIN    0x01 //PORTB bit 0;
+#define TRIG_PIN                        6    //PORTB bit 4;
+#define ECHO_PIN                        0x01 //PORTB bit 0;
 
 static void vSensorTask(void *pvParameters);
 static void delayMicrosecond(char x);
+static char mLED;
 
-void prvStartSensorTask(UBaseType_t uxPriority, QueueHandle_t dataQueue) {
-    xTaskCreate(vSensorTask, "Sensor", mSTACK_SIZE, (void*) dataQueue, uxPriority, (TaskHandle_t *) NULL);
+void prvStartSensorTask(UBaseType_t uxPriority, QueueHandle_t dataQueue, char taskLED) {
+
+    mLED = taskLED;
+    xTaskCreate(vSensorTask, "Sensor", mSTACK_SIZE, (void*) dataQueue, uxPriority, NULL);
 }
 /*-----------------------------------------------------------*/
 
@@ -52,19 +55,20 @@ void vSensorTask(void *pvParameters) {
     for (;;) {
         interval = 1;
         timeout = 0;
+        digitalIOToggle(mLED);
         digitalIOSet(TRIG_PIN, pdTRUE);
         delayMicrosecond(10);
         digitalIOSet(TRIG_PIN, pdFALSE);
-        while(!(PINB & ECHO_PIN) && (timeout < 10000)) {
+        while(!(PINB & ECHO_PIN) && (timeout < 65535)) {
             timeout++;
         }
-        while((PINB & ECHO_PIN) && (interval < 10000)) {
+        while((PINB & ECHO_PIN) && (interval < 65535)) {
             delayMicrosecond(1);
             interval += 1;
         }
         distance = ((float) interval * 0.0343) / 2;
-        xQueueSend(dataQueue, &distance, m500_MS);
-        vTaskDelay(m500_MS * 4);
+        xQueueSend(dataQueue, &distance, mDELAY_MS(500));
+        vTaskDelay(mDELAY_MS(3000));
     }
 }
 /*-----------------------------------------------------------*/
