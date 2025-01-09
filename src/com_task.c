@@ -32,7 +32,7 @@
 
 #define serialBUFFER_LEN                16
 #define mBUFFER_LEN                     20
-#define mSTACK_SIZE                     configMINIMAL_STACK_SIZE + mBUFFER_LEN * 2
+#define mSTACK_SIZE                     configMINIMAL_STACK_SIZE + mBUFFER_LEN * 2 + 6
 
 #define mNO_BLOCK                       (TickType_t) 0
 #define mDELAY_MS(x)                    (TickType_t) (x / portTICK_PERIOD_MS)
