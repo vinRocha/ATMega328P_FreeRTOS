@@ -53,11 +53,11 @@ void vSensorTask(void *pvParameters) {
     QueueHandle_t dataQueue = (QueueHandle_t) pvParameters;
 
     for (;;) {
-        interval = 1;
+        interval = 0;
         timeout = 0;
         digitalIOToggle(mLED);
         digitalIOSet(TRIG_PIN, pdTRUE);
-        delayMicrosecond(10);
+        delayMicrosecond(8);
         digitalIOSet(TRIG_PIN, pdFALSE);
         while(!(PINB & ECHO_PIN) && (timeout < 65535)) {
             timeout++;
@@ -66,6 +66,7 @@ void vSensorTask(void *pvParameters) {
             delayMicrosecond(1);
             interval += 1;
         }
+        interval += (interval/520 * 58); //correction factor 
         distance = ((float) interval * 0.0343) / 2;
         xQueueSend(dataQueue, &distance, mDELAY_MS(500));
         vTaskDelay(mDELAY_MS(3000));
