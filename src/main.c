@@ -45,16 +45,17 @@
 void vApplicationIdleHook(void);
 
 short main(void) {
+
     /* Initialize Digital IO ports */
     digitalIOInitialise();
 
     /* dataQueue to share data between sensor and com tasks */
-    QueueHandle_t dataQueue = xQueueCreate(5, sizeof(float));
+    QueueHandle_t dataQueue = xQueueCreate(1, sizeof(float));
 
-    /* Create sensor task */
-    prvStartSensorTask(mSENSOR_TASK_PRIORITY, dataQueue, mSENSOR_TASK_LED);
     /* Create com task*/
     prvStartComTask(mCOM_TASK_PRIORITY, mCOM_BAUD_RATE, dataQueue, mCOM_TASK_LED);
+    /* Create sensor task */
+    prvStartSensorTask(mSENSOR_TASK_PRIORITY, dataQueue, mSENSOR_TASK_LED);
 
     /* Start Tasks*/
     vTaskStartScheduler();

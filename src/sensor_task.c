@@ -20,6 +20,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  */
+
 #include <avr/io.h>
 #include "FreeRTOS.h"
 #include "task.h"
@@ -27,7 +28,7 @@
 #include "sensor_task.h"
 #include "drivers/digital_io.h"
 
-#define mSTACK_SIZE                     configMINIMAL_STACK_SIZE + 32
+#define mSTACK_SIZE                     configMINIMAL_STACK_SIZE
 
 #define mNO_BLOCK                       (TickType_t) 0
 #define mDELAY_MS(x)                    (TickType_t) (x / portTICK_PERIOD_MS)
