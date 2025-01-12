@@ -50,7 +50,7 @@ void prvStartComTask(UBaseType_t uxPriority, unsigned long ulBaudRate,
 /*-----------------------------------------------------------*/
 
 void vComTxTask(void *pvParameters) {
- 
+
     float distance;
     //"distance: 000.000\r\n" - size: 20
     char msg[mBUFFER_LEN];
