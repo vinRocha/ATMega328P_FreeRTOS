@@ -300,8 +300,8 @@ void rxThread(void *args) {
     unsigned char index;
 
     //Very ugly code, but it works...
-    //Keep running till esp8266AT_Disconnect() is called;
-    while(esp8266_status > RX_THREAD_INITIALIZED) {
+    //Keep running forever!!! Tasks cannot return!!!
+    for(;;) {
         digitalIOToggle(mLED);
         if (xSerialGetChar(NULL, (signed char*) &c[0], BLOCK_MS(500))) {
             if (c[0] == '+') {
