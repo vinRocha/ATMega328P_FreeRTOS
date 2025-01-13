@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "transport_esp8266.h"
+#include "portmacro.h"
 #include "task.h"
 #include "queue.h"
 #include "drivers/serial.h"
@@ -40,9 +41,9 @@
 #define RX_BLOCK                        BLOCK_MS(100)
 
 //constants
-#define mSTACK_SIZE                     configMINIMAL_STACK_SIZE + 100
+#define mSTACK_SIZE                     configMINIMAL_STACK_SIZE + 500
 const unsigned long BAUD_RATE =         115200;
-const int BUFFER_LEN =                  128;
+const int BUFFER_LEN =                  64;
 const int AT_REPLY_LEN =                7;
 
 enum transportStatus {
@@ -70,14 +71,20 @@ static void start_TCP(const char *pHostName, const char *port);
 static void stop_TCP();
 static void send_to_controlQ(int n, const char *c);
 
-void prvCreateTransportTasks(UBaseType_t uxPriority, char taskLED) {
+esp8266TransportStatus_t prvCreateTransportTasks(UBaseType_t uxPriority, char taskLED) {
 
     mLED = taskLED;
     xSerialPortInitMinimal(BAUD_RATE, BUFFER_LEN);
     controlQ = xQueueCreate(BUFFER_LEN/2, (UBaseType_t) sizeof(char));
+    if (!controlQ)
+        return ESP8266_TRANSPORT_CONNECT_FAILURE;
     dataQ = xQueueCreate(BUFFER_LEN, (UBaseType_t) sizeof(char));
-    xTaskCreate(rxThread, "COMRx", mSTACK_SIZE, NULL, uxPriority, NULL);
+    if (!dataQ)
+        return ESP8266_TRANSPORT_CONNECT_FAILURE;
+    if (xTaskCreate(rxThread, "COMRx", mSTACK_SIZE, NULL, uxPriority, NULL) != pdPASS)
+        return ESP8266_TRANSPORT_CONNECT_FAILURE;
     esp8266_status = RX_THREAD_INITIALIZED;
+    return ESP8266_TRANSPORT_SUCCESS;
 }
 
 esp8266TransportStatus_t esp8266AT_Connect(const char *pHostName, const char *port) {
@@ -186,26 +193,25 @@ void check_AT(void) {
     xSerialPutChar(NULL, '0', TX_BLOCK); // Disable echo
     xSerialPutChar(NULL, '\r', TX_BLOCK);
 
-    SLEEP; //so serial interface has enough time to receive echo.
     //Clear control buffer, if anything is there
-    while (xQueueReceive(controlQ, at_cmd_response, NO_BLOCK) > 0);
+    while (xQueueReceive(controlQ, at_cmd_response, BLOCK_MS(200)) > 0);
 
     //Complete the command
     xSerialPutChar(NULL, '\n', TX_BLOCK);
 
     SLEEP;
-    for (int i = 0; i < AT_REPLY_LEN - 1;) {
-        if (xQueueReceive(controlQ, &at_cmd_response[i], NO_BLOCK) > 0) {
-            i++;
-        }
-    }
+//    for (int i = 0; i < AT_REPLY_LEN - 1;) {
+//        if (xQueueReceive(controlQ, &at_cmd_response[i], NO_BLOCK) > 0) {
+//            i++;
+//        }
+//    }
 
-    if(strcmp(at_cmd_response, "\r\nOK\r\n")) {
-        esp8266_status = ERROR;
-    }
-    else {
+//    if(strcmp(at_cmd_response, "\r\nOK\r\n")) {
+//        esp8266_status = ERROR;
+//    }
+//    else {
         esp8266_status = AT_READY;
-    }
+//    }
     return;
 }
 
@@ -214,22 +220,7 @@ void start_TCP(const char *pHostName, const char *port) {
     char c;
 
     //Close existing TCP connection, if any
-    xSerialPutChar(NULL, 'A', TX_BLOCK);
-    xSerialPutChar(NULL, 'T', TX_BLOCK);
-    xSerialPutChar(NULL, '+', TX_BLOCK);
-    xSerialPutChar(NULL, 'C', TX_BLOCK);
-    xSerialPutChar(NULL, 'I', TX_BLOCK);
-    xSerialPutChar(NULL, 'P', TX_BLOCK);
-    xSerialPutChar(NULL, 'C', TX_BLOCK);
-    xSerialPutChar(NULL, 'L', TX_BLOCK);
-    xSerialPutChar(NULL, 'O', TX_BLOCK);
-    xSerialPutChar(NULL, 'S', TX_BLOCK);
-    xSerialPutChar(NULL, 'E', TX_BLOCK);
-    xSerialPutChar(NULL, '\r', TX_BLOCK);
-    xSerialPutChar(NULL, '\n', TX_BLOCK);
-    SLEEP;
-    //Clear rx control buffer
-    while (xQueueReceive(controlQ, &c, NO_BLOCK) > 0);
+    stop_TCP();
 
     //AT header to start TCP connection
     xSerialPutChar(NULL, 'A', TX_BLOCK);
@@ -269,15 +260,14 @@ void start_TCP(const char *pHostName, const char *port) {
 
     xQueueReceive(controlQ, &c, BLOCK_MS(200)); //C, if success
 
-    if (c != 'C') {
-        esp8266_status = ERROR;
-    }
-    else {
+//    if (c != 'C') {
+//        esp8266_status = ERROR;
+//    }
+//    else {
         esp8266_status = CONNECTED;
-    }
+//    }
     //Clear rx control buffer
     while (xQueueReceive(controlQ, &c, NO_BLOCK) > 0);
-    return;
 }
 
 void stop_TCP() {
@@ -313,7 +303,7 @@ void rxThread(void *args) {
     //Keep running till esp8266AT_Disconnect() is called;
     while(esp8266_status > RX_THREAD_INITIALIZED) {
         digitalIOToggle(mLED);
-        if (xSerialGetChar(NULL, (signed char*) &c[0], BLOCK_MS(10))) {
+        if (xSerialGetChar(NULL, (signed char*) &c[0], BLOCK_MS(500))) {
             if (c[0] == '+') {
                 while(!xSerialGetChar(NULL, (signed char*) &c[1], RX_BLOCK));
                 if (c[1] == 'I') {
@@ -336,7 +326,7 @@ void rxThread(void *args) {
                                 data_lenght = atoi(c);
                                 for (; data_lenght > 0; data_lenght--) {
                                     while(!xSerialGetChar(NULL, (signed char*) c, RX_BLOCK));
-                                    xQueueSend(dataQ, &c, BLOCK_MS(200));
+                                    xQueueSend(dataQ, c, BLOCK_MS(200));
                                 }
                             }
                             else {
@@ -356,7 +346,7 @@ void rxThread(void *args) {
                 }
             }
             else {
-                xQueueSend(controlQ, &c, BLOCK_MS(200));
+                xQueueSend(controlQ, c, BLOCK_MS(200));
             }
         }
     }

@@ -21,6 +21,7 @@
  *
  */
 
+#include <stdio.h>
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
@@ -30,11 +31,13 @@
 /* Priority definitions for tasks */
 #define mCOM_TASK_PRIORITY              (tskIDLE_PRIORITY + 4)
 #define mECHO_TASK_PRIORITY             (tskIDLE_PRIORITY + 3)
-#define mECHO_STACK_SIZE                 configMINIMAL_STACK_SIZE + 100
+#define mECHO_STACK_SIZE                 configMINIMAL_STACK_SIZE + 96
 
-/* Debugin LED */
+/* Debuging LED */
 #define mARDUINO_BUILTIN_LED            7
 #define mCOM_TASK_LED                   0
+#define mECHO_TASK_LED                  1
+#define mERROR_LED                      2
 
 /* The period between executions of the check task. */
 #define DELAY_MS(x)                    (TickType_t) (x / portTICK_PERIOD_MS)
@@ -48,10 +51,15 @@ short main(void) {
     digitalIOInitialise();
 
     /* Create COM task */
-    prvCreateTransportTasks(mCOM_TASK_PRIORITY, mCOM_TASK_LED);
+    if (prvCreateTransportTasks(mCOM_TASK_PRIORITY, mCOM_TASK_LED) != ESP8266_TRANSPORT_SUCCESS) {
+        digitalIOSet(mERROR_LED, pdTRUE);
+        for (;;) {};
+    }
 
     /* Create Echo task */
-    xTaskCreate(prvEchoTask, "EchoTask", mECHO_STACK_SIZE, NULL, mECHO_TASK_PRIORITY, NULL);
+    if (xTaskCreate(prvEchoTask, "EchoT", mECHO_STACK_SIZE, NULL, mECHO_TASK_PRIORITY, NULL) != pdPASS) {
+        digitalIOSet(mERROR_LED, pdTRUE);
+    }
 
     /* Start Tasks*/
     vTaskStartScheduler();
@@ -63,22 +71,28 @@ short main(void) {
 
 void prvEchoTask(void *pv) {
     (void) pv;
+    char rxB = 0;
     char buffer[32];
 
     //connect to my server:
     esp8266AT_Connect("192.168.0.235", "1883");
 
     for(;;) {
+        digitalIOToggle(mECHO_TASK_LED);
         //receive msg
-        esp8266AT_recv(NULL, buffer, 32);
+//        rxB = esp8266AT_recv(NULL, buffer, 32);
 
         //echo received msg
-        esp8266AT_send(NULL, buffer, 32);
-        vTaskDelay(DELAY_MS(200));
+        if (rxB)
+            esp8266AT_send(NULL, buffer, 32);
+        snprintf(buffer, 32, "FreeH: %d\r\n", xPortGetFreeHeapSize());
+        esp8266AT_send(NULL, buffer, 13);
+        vTaskDelay(DELAY_MS(500));
     }
 
 }
 
 void vApplicationIdleHook(void) {
+    digitalIOToggle(mARDUINO_BUILTIN_LED);
     /*This function must return;*/
 }
