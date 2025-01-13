@@ -41,7 +41,7 @@
 #define RX_BLOCK                        BLOCK_MS(10)
 
 //constants
-#define mSTACK_SIZE                     configMINIMAL_STACK_SIZE + 284
+#define mSTACK_SIZE                     112
 const unsigned long BAUD_RATE =         115200;
 const int BUFFER_LEN =                  128;
 const int AT_REPLY_LEN =                7;

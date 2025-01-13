@@ -31,7 +31,7 @@
 /* Priority definitions for tasks */
 #define mCOM_TASK_PRIORITY              (tskIDLE_PRIORITY + 4)
 #define mECHO_TASK_PRIORITY             (tskIDLE_PRIORITY + 3)
-#define mECHO_STACK_SIZE                 configMINIMAL_STACK_SIZE + 96
+#define mECHO_STACK_SIZE                181
 
 /* Debuging LED */
 #define mARDUINO_BUILTIN_LED            7
@@ -40,7 +40,7 @@
 #define mERROR_LED                      2
 
 /* The period between executions of the check task. */
-#define DELAY_MS(x)                    (TickType_t) (x / portTICK_PERIOD_MS)
+#define DELAY_MS(x)                     (TickType_t) (x / portTICK_PERIOD_MS)
 
 static void prvEchoTask(void *pv);
 void vApplicationIdleHook(void);
@@ -59,6 +59,7 @@ short main(void) {
     /* Create Echo task */
     if (xTaskCreate(prvEchoTask, "EchoT", mECHO_STACK_SIZE, NULL, mECHO_TASK_PRIORITY, NULL) != pdPASS) {
         digitalIOSet(mERROR_LED, pdTRUE);
+        for (;;) {};
     }
 
     /* Start Tasks*/
@@ -78,21 +79,18 @@ void prvEchoTask(void *pv) {
     esp8266AT_Connect("192.168.0.235", "1883");
 
     for(;;) {
-        digitalIOToggle(mECHO_TASK_LED);
         //receive msg
-//        rxB = esp8266AT_recv(NULL, buffer, 32);
+        rxB = esp8266AT_recv(NULL, buffer, 32);
 
         //echo received msg
-        if (rxB)
-            esp8266AT_send(NULL, buffer, 32);
-        snprintf(buffer, 32, "FreeH: %d\r\n", xPortGetFreeHeapSize());
-        esp8266AT_send(NULL, buffer, 13);
-        vTaskDelay(DELAY_MS(500));
+        if (rxB) {
+            esp8266AT_send(NULL, buffer, rxB);
+        }
+        vTaskDelay(DELAY_MS(200));
     }
-
 }
 
 void vApplicationIdleHook(void) {
-    digitalIOToggle(mARDUINO_BUILTIN_LED);
+    //digitalIOToggle(mARDUINO_BUILTIN_LED);
     /*This function must return;*/
 }
