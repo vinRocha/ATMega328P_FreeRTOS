@@ -38,12 +38,12 @@
 #define BLOCK_MS(x)                     DELAY_MS(x)
 #define NO_BLOCK                        0x00
 #define TX_BLOCK                        0x00
-#define RX_BLOCK                        BLOCK_MS(100)
+#define RX_BLOCK                        BLOCK_MS(10)
 
 //constants
-#define mSTACK_SIZE                     configMINIMAL_STACK_SIZE + 500
+#define mSTACK_SIZE                     configMINIMAL_STACK_SIZE + 284
 const unsigned long BAUD_RATE =         115200;
-const int BUFFER_LEN =                  64;
+const int BUFFER_LEN =                  128;
 const int AT_REPLY_LEN =                7;
 
 enum transportStatus {
@@ -149,16 +149,15 @@ int32_t esp8266AT_send(NetworkContext_t *pNetworkContext, const void *pBuffer, s
         }
         xSerialPutChar(NULL, '\r', TX_BLOCK);
         xSerialPutChar(NULL, '\n', TX_BLOCK);
-        //Should check for errors here, but for now, just send the data.
         SLEEP; //so ESP8266 can process the AT COMMAND;
+        //Should check for errors here, but for now, just send the data.
         for (int i = 0; i < 2048; i++) {
             while(!xSerialPutChar(NULL, *((signed char*) pBuffer + bytes_sent), TX_BLOCK));
             bytes_sent++;
             bytesToSend--;
         }
-        SLEEP;
         //Should check for errors here... but for now, only clear control buffer.
-        while (xQueueReceive(controlQ, &c, NO_BLOCK) > 0);
+        while (xQueueReceive(controlQ, &c, BLOCK_MS(200)) > 0);
     }
 
     snprintf(&command[11], 5, "%d", (int) bytesToSend);
@@ -174,10 +173,8 @@ int32_t esp8266AT_send(NetworkContext_t *pNetworkContext, const void *pBuffer, s
         while(!xSerialPutChar(NULL, *((signed char*) pBuffer + bytes_sent), TX_BLOCK));
         bytes_sent++;
     }
-
-    SLEEP;
     //Should check for errors here... but for now, only clear control buffer.
-    while (xQueueReceive(controlQ, &c, NO_BLOCK) > 0);
+    while (xQueueReceive(controlQ, &c, BLOCK_MS(200)) > 0);
 
     return bytes_sent;
 }
@@ -199,19 +196,18 @@ void check_AT(void) {
     //Complete the command
     xSerialPutChar(NULL, '\n', TX_BLOCK);
 
-    SLEEP;
-//    for (int i = 0; i < AT_REPLY_LEN - 1;) {
-//        if (xQueueReceive(controlQ, &at_cmd_response[i], NO_BLOCK) > 0) {
-//            i++;
-//        }
-//    }
+    for (int i = 0; i < AT_REPLY_LEN - 1;) {
+        if (xQueueReceive(controlQ, &at_cmd_response[i], NO_BLOCK) > 0) {
+            i++;
+        }
+    }
 
-//    if(strcmp(at_cmd_response, "\r\nOK\r\n")) {
-//        esp8266_status = ERROR;
-//    }
-//    else {
-        esp8266_status = AT_READY;
-//    }
+    if(strcmp(at_cmd_response, "\r\nOK\r\n")) {
+        esp8266_status = ERROR;
+    }
+    else {
+       esp8266_status = AT_READY;
+    }
     return;
 }
 
@@ -260,12 +256,12 @@ void start_TCP(const char *pHostName, const char *port) {
 
     xQueueReceive(controlQ, &c, BLOCK_MS(200)); //C, if success
 
-//    if (c != 'C') {
-//        esp8266_status = ERROR;
-//    }
-//    else {
-        esp8266_status = CONNECTED;
-//    }
+    if (c != 'C') {
+        esp8266_status = ERROR;
+    }
+    else {
+      esp8266_status = CONNECTED;
+    }
     //Clear rx control buffer
     while (xQueueReceive(controlQ, &c, NO_BLOCK) > 0);
 }
@@ -287,9 +283,8 @@ void stop_TCP() {
     xSerialPutChar(NULL, 'E', TX_BLOCK);
     xSerialPutChar(NULL, '\r', TX_BLOCK);
     xSerialPutChar(NULL, '\n', TX_BLOCK);
-    SLEEP;
     //Clear rx control buffer
-    while (xQueueReceive(controlQ, &c, NO_BLOCK) > 0);
+    while (xQueueReceive(controlQ, &c, BLOCK_MS(200)) > 0);
     esp8266_status = RX_THREAD_INITIALIZED;
 }
 
@@ -302,8 +297,7 @@ void rxThread(void *args) {
     //Very ugly code, but it works...
     //Keep running forever!!! Tasks cannot return!!!
     for(;;) {
-        digitalIOToggle(mLED);
-        if (xSerialGetChar(NULL, (signed char*) &c[0], BLOCK_MS(500))) {
+        if (xSerialGetChar(NULL, (signed char*) &c[0], RX_BLOCK)) {
             if (c[0] == '+') {
                 while(!xSerialGetChar(NULL, (signed char*) &c[1], RX_BLOCK));
                 if (c[1] == 'I') {
