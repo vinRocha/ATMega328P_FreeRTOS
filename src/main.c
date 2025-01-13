@@ -29,8 +29,8 @@
 
 /* Priority definitions for tasks */
 #define mCOM_TASK_PRIORITY              (tskIDLE_PRIORITY + 4)
-#define mECHO_TASK_PRIORITY             (taskIDLE_PRIORITY + 3)
-#define mECHO_STACK_SIZE                 configMINIMAL_STACK_SIZE + 100;
+#define mECHO_TASK_PRIORITY             (tskIDLE_PRIORITY + 3)
+#define mECHO_STACK_SIZE                 configMINIMAL_STACK_SIZE + 100
 
 /* Debugin LED */
 #define mARDUINO_BUILTIN_LED            7
@@ -74,7 +74,7 @@ void prvEchoTask(void *pv) {
 
         //echo received msg
         esp8266AT_send(NULL, buffer, 32);
-        vTaskDelay(DELAY_MS(200);
+        vTaskDelay(DELAY_MS(200));
     }
 
 }

@@ -313,7 +313,7 @@ void rxThread(void *args) {
     //Keep running till esp8266AT_Disconnect() is called;
     while(esp8266_status > RX_THREAD_INITIALIZED) {
         digitalIOToggle(mLED);
-        if (xSerialGetChar(NULL, (signed char*) &c[0], BLOCK_MS(10)) {
+        if (xSerialGetChar(NULL, (signed char*) &c[0], BLOCK_MS(10))) {
             if (c[0] == '+') {
                 while(!xSerialGetChar(NULL, (signed char*) &c[1], RX_BLOCK));
                 if (c[1] == 'I') {
