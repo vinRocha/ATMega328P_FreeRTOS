@@ -30,6 +30,7 @@ extern "C" {
 #endif
 
 #include "transport_interface.h"
+#include "FreeRTOS.h"
 
 typedef enum esp8266TransportStatus {
     ESP8266_TRANSPORT_SUCCESS = 1,           /**< Function successfully completed. */
@@ -37,8 +38,9 @@ typedef enum esp8266TransportStatus {
     ESP8266_TRANSPORT_CONNECT_FAILURE = 3    /**< Initial connection to the server failed. */
 } esp8266TransportStatus_t;
 
-//pHostName must be the target ipv4 address embraced by quotes.
-//ex.: "192.168.0.123", port is the TCP target port number.
+void prvCreateTransportTasks(UBaseType_t uxPriority, char taskLED);
+
+//pHostName must be the target ipv4 address, port is the TCP target port number.
 esp8266TransportStatus_t esp8266AT_Connect(const char *pHostName, const char *port);
 esp8266TransportStatus_t esp8266AT_Disconnect(void);
 
