@@ -104,6 +104,9 @@ esp8266TransportStatus_t esp8266AT_Connect(const char *pHostName, const char *po
 }
 
 esp8266TransportStatus_t esp8266AT_Disconnect(void) {
+    if (esp8266_status != CONNECTED) {
+        return ESP8266_TRANSPORT_CONNECT_FAILURE;
+    }
     stop_TCP();
     return ESP8266_TRANSPORT_SUCCESS;
 }
@@ -297,6 +300,7 @@ void stop_TCP() {
     SLEEP;
     //Clear rx control buffer
     while (xQueueReceive(controlQ, &c, NO_BLOCK) > 0);
+    esp8266_status = RX_THREAD_INITIALIZED;
 }
 
 void rxThread(void *args) {
