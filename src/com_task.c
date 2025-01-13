@@ -40,7 +40,7 @@
 static void vComTxTask(void *pvParameters);
 static char mLED;
 
-void prvStartComTask(UBaseType_t uxPriority, unsigned long ulBaudRate,
+void prvCreateComTask(UBaseType_t uxPriority, unsigned long ulBaudRate,
         QueueHandle_t dataQueue, char taskLED) {
 
     mLED = taskLED;

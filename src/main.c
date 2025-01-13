@@ -52,7 +52,7 @@ short main(void) {
     /* Create com task*/
     prvCreateTransportTasks(mCOM_TASK_PRIORITY, mCOM_TASK_LED);
     /* Create sensor task */
-    prvStartSensorTask(mSENSOR_TASK_PRIORITY, dataQueue, mSENSOR_TASK_LED);
+    prvCreateSensorTask(mSENSOR_TASK_PRIORITY, dataQueue, mSENSOR_TASK_LED);
 
     /* Start Tasks*/
     vTaskStartScheduler();
