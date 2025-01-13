@@ -48,8 +48,8 @@ void prvCreateSensorTask(UBaseType_t uxPriority, QueueHandle_t dataQueue, char t
 /*-----------------------------------------------------------*/
 
 void vSensorTask(void *pvParameters) {
- 
-    float distance;
+
+//    float distance;
     unsigned int interval, timeout;
     QueueHandle_t dataQueue = (QueueHandle_t) pvParameters;
 
@@ -68,8 +68,8 @@ void vSensorTask(void *pvParameters) {
             interval += 1;
         }
         interval += (interval/520 * 58); //correction factor 
-        distance = ((float) interval * 0.0343) / 2;
-        xQueueSend(dataQueue, &distance, mDELAY_MS(500));
+//        distance = ((float) interval * 0.0343) / 2;
+        xQueueSend(dataQueue, &interval, mDELAY_MS(500));
         vTaskDelay(mDELAY_MS(3000));
     }
 }

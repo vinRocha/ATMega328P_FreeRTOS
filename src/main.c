@@ -24,8 +24,8 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
-#include "transport_esp8266.h"
 #include "sensor_task.h"
+#include "transport_esp8266.h"
 #include "drivers/digital_io.h"
 
 /* Priority definitions for tasks */
@@ -47,7 +47,7 @@ short main(void) {
     digitalIOInitialise();
 
     /* dataQueue to share data between sensor and com tasks */
-    QueueHandle_t dataQueue = xQueueCreate(1, sizeof(float));
+    QueueHandle_t dataQueue = xQueueCreate(1, sizeof(unsigned int));
 
     /* Create com task*/
     prvCreateTransportTasks(mCOM_TASK_PRIORITY, mCOM_TASK_LED);
