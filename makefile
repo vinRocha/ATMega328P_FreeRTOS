@@ -48,9 +48,8 @@ OPT = s
 SOURCE_DIR = ../Source
 PORT_DIR = ./portable/GCC/ATMega328P
 
-SRC	= \
+CSRC	= \
 src/main.c \
-src/com_task.c \
 src/sensor_task.c \
 src/drivers/digital_io.c \
 src/drivers/serial.c \
@@ -60,6 +59,7 @@ $(SOURCE_DIR)/list.c \
 $(SOURCE_DIR)/portable/MemMang/heap_1.c \
 $(PORT_DIR)/port.c \
 
+CXXSRC = src/transport_esp8266.cpp
 
 # If there is more than one source file, append them above, or modify and
 # uncomment the following:
@@ -94,17 +94,21 @@ EXTRAINCDIRS =
 #  -Wa,...:   tell GCC to pass this to the assembler.
 #    -ahlms:  create assembler listing
 
-DEBUG_LEVEL=-g
+DEBUG_LEVEL=
 WARNINGS=-Wall -Wextra -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wsign-compare \
 		-Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wunused
 
-CFLAGS = -I./include -I../Source/include -I$(PORT_DIR) -Wl,-u,vfprintf -lprintf_flt -lm  \
+CFLAGS = -I./include -I../Source/include -I$(PORT_DIR) \
 $(DEBUG_LEVEL) -O$(OPT) \
 -fsigned-char -funsigned-bitfields -fpack-struct -fshort-enums \
 $(WARNINGS) \
 -Wa,-adhlns=$(<:.c=.lst) \
 $(patsubst %,-I%,$(EXTRAINCDIRS))
 
+CXXFLAGS = -I./include -I../Source/include -I$(PORT_DIR) \
+$(DEBUG_LEVEL) -O$(OPT) \
+-fsigned-char -funsigned-bitfields -fpack-struct -fshort-enums \
+-Wa,-adhlns=$(<:.cpp=.lst)
 
 # Set a "language standard" compiler flag.
 #   Unremark just one line below to set the language standard to use.
@@ -199,6 +203,7 @@ DIRLIB = $(DIRAVR)/avr/lib
 SHELL = sh
 
 CC = avr-gcc
+CXX = avr-g++
 
 OBJCOPY = avr-objcopy
 OBJDUMP = avr-objdump
@@ -239,14 +244,15 @@ MSG_CLEANING = Cleaning project:
 
 
 # Define all object files.
-OBJ = $(SRC:.c=.o) $(ASRC:.S=.o) 
+OBJ = $(CSRC:.c=.o) $(ASRC:.S=.o) $(CXXSRC:.cpp=.o) 
 
 # Define all listing files.
-LST = $(ASRC:.S=.lst) $(SRC:.c=.lst)
+LST = $(ASRC:.S=.lst) $(CSRC:.c=.lst) $(CXXSRC:.cpp=.lst)
 
 # Combine all necessary flags and optional flags.
 # Add target processor to flags.
 ALL_CFLAGS = -mmcu=$(MCU) -I. $(CFLAGS)
+ALL_CXXFLAGS = -mmcu=$(MCU) $(CXXFLAGS)
 ALL_ASFLAGS = -mmcu=$(MCU) -I. -x assembler-with-cpp $(ASFLAGS)
 
 
@@ -358,6 +364,10 @@ program: $(TARGET).hex $(TARGET).eep
 	@echo $(MSG_COMPILING) $<
 	$(CC) -c $(ALL_CFLAGS) $< -o $@
 
+%.o : %.cpp
+	@echo
+	@echo $(MSG_COMPILING) $<
+	$(CXX) -c $(ALL_CXXFLAGS) $< -o $@
 
 # Compile: create assembler files from C source files.
 %.s : %.c

@@ -24,20 +24,17 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
-#include "com_task.h"
+#include "transport_esp8266.h"
 #include "sensor_task.h"
 #include "drivers/digital_io.h"
 
 /* Priority definitions for tasks */
-#define mCOM_TASK_PRIORITY              (tskIDLE_PRIORITY + 1)
+#define mCOM_TASK_PRIORITY              (tskIDLE_PRIORITY + 4)
 #define mSENSOR_TASK_PRIORITY           (tskIDLE_PRIORITY + 2)
 
-/* Baud rate used by the serial port. */
-#define mCOM_BAUD_RATE                  (unsigned long) 115200
-
 #define mARDUINO_BUILTIN_LED            7
-#define mSENSOR_TASK_LED                0
-#define mCOM_TASK_LED                   1
+#define mCOM_TASK_LED                   0
+#define mSENSOR_TASK_LED                1
 
 /* The period between executions of the check task. */
 #define mDELAY_MS(x)                    (TickType_t) (x / portTICK_PERIOD_MS)
@@ -53,7 +50,7 @@ short main(void) {
     QueueHandle_t dataQueue = xQueueCreate(1, sizeof(float));
 
     /* Create com task*/
-    prvStartComTask(mCOM_TASK_PRIORITY, mCOM_BAUD_RATE, dataQueue, mCOM_TASK_LED);
+    prvCreateTransportTasks(mCOM_TASK_PRIORITY, mCOM_TASK_LED);
     /* Create sensor task */
     prvStartSensorTask(mSENSOR_TASK_PRIORITY, dataQueue, mSENSOR_TASK_LED);
 

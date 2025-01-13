@@ -24,6 +24,10 @@
 #ifndef SERIAL_SERIAL_H
 #define SERIAL_SERIAL_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef void * xComPortHandle;
 
 typedef enum
@@ -101,5 +105,9 @@ signed portBASE_TYPE xSerialPutChar( xComPortHandle pxPort,
                                      TickType_t xBlockTime );
 portBASE_TYPE xSerialWaitForSemaphore( xComPortHandle xPort );
 void vSerialClose( xComPortHandle xPort );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* ifndef SERIAL_SERIAL_H */

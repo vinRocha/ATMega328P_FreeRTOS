@@ -24,9 +24,17 @@
 #ifndef DIGITAL_IO_H
 #define DIGITAL_IO_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void digitalIOInitialise( void );
 void digitalIOSet( UBaseType_t uxLED,
                      BaseType_t xValue );
 void digitalIOToggle( UBaseType_t uxLED );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

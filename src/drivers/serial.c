@@ -171,7 +171,7 @@ SIGNAL(USART_RX_vect) {
 	may have a higher priority than the task we have interrupted. */
 	cChar = UDR0;
 
-	//xQueueSendFromISR(xRxedChars, &cChar, &xHigherPriorityTaskWoken);
+	xQueueSendFromISR(xRxedChars, &cChar, &xHigherPriorityTaskWoken);
 
 	if (xHigherPriorityTaskWoken != pdFALSE) {
 		taskYIELD();
