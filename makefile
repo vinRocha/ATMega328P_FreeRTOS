@@ -50,7 +50,6 @@ PORT_DIR = ./portable/GCC/ATMega328P
 
 CSRC	= \
 src/main.c \
-src/sensor_task.c \
 src/drivers/digital_io.c \
 src/drivers/serial.c \
 $(SOURCE_DIR)/tasks.c \

@@ -24,21 +24,22 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
-#include "sensor_task.h"
 #include "transport_esp8266.h"
 #include "drivers/digital_io.h"
 
 /* Priority definitions for tasks */
 #define mCOM_TASK_PRIORITY              (tskIDLE_PRIORITY + 4)
-#define mSENSOR_TASK_PRIORITY           (tskIDLE_PRIORITY + 2)
+#define mECHO_TASK_PRIORITY             (taskIDLE_PRIORITY + 3)
+#define mECHO_STACK_SIZE                 configMINIMAL_STACK_SIZE + 100;
 
+/* Debugin LED */
 #define mARDUINO_BUILTIN_LED            7
 #define mCOM_TASK_LED                   0
-#define mSENSOR_TASK_LED                1
 
 /* The period between executions of the check task. */
-#define mDELAY_MS(x)                    (TickType_t) (x / portTICK_PERIOD_MS)
+#define DELAY_MS(x)                    (TickType_t) (x / portTICK_PERIOD_MS)
 
+static void prvEchoTask(void *pv);
 void vApplicationIdleHook(void);
 
 short main(void) {
@@ -46,13 +47,11 @@ short main(void) {
     /* Initialize Digital IO ports */
     digitalIOInitialise();
 
-    /* dataQueue to share data between sensor and com tasks */
-    QueueHandle_t dataQueue = xQueueCreate(1, sizeof(unsigned int));
-
-    /* Create com task*/
+    /* Create COM task */
     prvCreateTransportTasks(mCOM_TASK_PRIORITY, mCOM_TASK_LED);
-    /* Create sensor task */
-    prvCreateSensorTask(mSENSOR_TASK_PRIORITY, dataQueue, mSENSOR_TASK_LED);
+
+    /* Create Echo task */
+    xTaskCreate(prvEchoTask, "EchoTask", mECHO_STACK_SIZE, NULL, mECHO_TASK_PRIORITY, NULL);
 
     /* Start Tasks*/
     vTaskStartScheduler();
@@ -61,6 +60,24 @@ short main(void) {
     return 0;
 }
 /*-----------------------------------------------------------*/
+
+void prvEchoTask(void *pv) {
+    (void) pv;
+    char buffer[32];
+
+    //connect to my server:
+    esp8266AT_Connect("192.168.0.235", "1883");
+
+    for(;;) {
+        //receive msg
+        esp8266AT_recv(NULL, buffer, 32);
+
+        //echo received msg
+        esp8266AT_send(NULL, buffer, 32);
+        vTaskDelay(DELAY_MS(200);
+    }
+
+}
 
 void vApplicationIdleHook(void) {
     /*This function must return;*/
