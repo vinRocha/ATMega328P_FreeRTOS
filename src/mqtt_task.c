@@ -600,7 +600,7 @@ static esp8266TransportStatus_t prvConnectToServerWithBackoffRetries( NetworkCon
              * Note: It is recommended to seed the random number generator with a device-specific
              * entropy source so that possibility of multiple devices retrying failed network operations
              * at similar intervals can be avoided. */
-            xBackoffAlgStatus = BackoffAlgorithm_GetNextBackoff( &xReconnectParams, uxRand(), &usNextRetryBackOff );
+            xBackoffAlgStatus = BackoffAlgorithm_GetNextBackoff( &xReconnectParams, 0xff, &usNextRetryBackOff );
 
             if( xBackoffAlgStatus == BackoffAlgorithmRetriesExhausted )
             {
@@ -780,7 +780,7 @@ static void prvMQTTSubscribeWithBackoffRetries( MQTTContext_t * pxMQTTContext )
                  * Note: It is recommended to seed the random number generator with a device-specific
                  * entropy source so that possibility of multiple devices retrying failed network operations
                  * at similar intervals can be avoided. */
-                xBackoffAlgStatus = BackoffAlgorithm_GetNextBackoff( &xRetryParams, uxRand(), &usNextRetryBackOff );
+                xBackoffAlgStatus = BackoffAlgorithm_GetNextBackoff( &xRetryParams, 0xffff, &usNextRetryBackOff );
 
                 if( xBackoffAlgStatus == BackoffAlgorithmRetriesExhausted )
                 {
