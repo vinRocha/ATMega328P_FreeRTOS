@@ -68,4 +68,8 @@ to exclude the API function. */
 #define INCLUDE_vTaskDelay                  1
 #define INCLUDE_uxTaskGetStackHighWaterMark 0
 
+/* Configure pdMS_TO_TICKS and pdTICKS_TO_MS */
+#define pdMS_TO_TICKS(x)                    ((TickType_t) x / portTICK_PERIOD_MS)
+#define pdTICKS_TO_MS(x)                    ((TickType_t) portTICK_PERIOD_MS * x)
+
 #endif /* FREERTOS_CONFIG_H */
