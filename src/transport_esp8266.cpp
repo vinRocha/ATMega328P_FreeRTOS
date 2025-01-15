@@ -27,7 +27,6 @@
 #include <stdio.h>
 #include <string.h>
 #include "transport_esp8266.h"
-#include "portmacro.h"
 #include "task.h"
 #include "queue.h"
 #include "drivers/serial.h"
