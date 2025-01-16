@@ -40,10 +40,12 @@ static void vSensorTask(void *pvParameters);
 static void delayMicrosecond(char x);
 static char mLED;
 
-void prvCreateSensorTask(UBaseType_t uxPriority, QueueHandle_t dataQueue, char taskLED) {
+BaseType_t createSensorTask(StackType_t stackSize, UBaseType_t priority, QueueHandle_t dataQueue, char taskLED) {
 
     mLED = taskLED;
-    xTaskCreate(vSensorTask, "Sensor", mSTACK_SIZE, (void*) dataQueue, uxPriority, NULL);
+    if (xTaskCreate(vSensorTask, "Sensor", stackSize, (void*) dataQueue, priority, NULL) != pdPASS)
+        return pdFAIL;
+    return pdPASS;
 }
 /*-----------------------------------------------------------*/
 

@@ -25,24 +25,25 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
-#include "transport_esp8266.h"
 #include "drivers/digital_io.h"
+#include "transport_esp8266.h"
+#include "mqtt_task.h"
 
-/* Priority definitions for tasks */
-#define mCOM_TASK_PRIORITY              (tskIDLE_PRIORITY + 4)
-#define mECHO_TASK_PRIORITY             (tskIDLE_PRIORITY + 3)
-#define mECHO_STACK_SIZE                181
+/* Tasks' priority definitions */
+#define mCOM_PRIORITY              (tskIDLE_PRIORITY + 4)
+#define mMQTT_PRIORITY             (tskIDLE_PRIORITY + 3)
 
-/* Debuging LED */
-#define mARDUINO_BUILTIN_LED            7
-#define mCOM_TASK_LED                   0
-#define mECHO_TASK_LED                  1
-#define mERROR_LED                      2
+/* Tasks' StackSize definitions */
+#define mCOM_STACK_SIZE                 112
+#define mMQTT_STACK_SIZE                181
+
+/* Tasks' debugging LED */
+#define mCOM_LED                        0
+#define mMQTT_LED                       1
 
 /* The period between executions of the check task. */
 #define DELAY_MS(x)                     (TickType_t) (x / portTICK_PERIOD_MS)
 
-static void prvEchoTask(void *pv);
 void vApplicationIdleHook(void);
 
 short main(void) {
@@ -51,13 +52,13 @@ short main(void) {
     digitalIOInitialise();
 
     /* Create COM task */
-    if (prvCreateTransportTasks(mCOM_TASK_PRIORITY, mCOM_TASK_LED) != ESP8266_TRANSPORT_SUCCESS) {
+    if (createTransportTasks(mCOM_STACK_SIZE, mCOM_PRIORITY, mCOM_LED) != pdPASS) {
         digitalIOSet(mERROR_LED, pdTRUE);
         for (;;) {};
     }
 
     /* Create Echo task */
-    if (xTaskCreate(prvEchoTask, "EchoT", mECHO_STACK_SIZE, NULL, mECHO_TASK_PRIORITY, NULL) != pdPASS) {
+   if (createMQTTtask(mMQTT_STACK_SIZE, mMQTT_PRIORITY, mMQTT_LED) != pdPASS) {
         digitalIOSet(mERROR_LED, pdTRUE);
         for (;;) {};
     }
@@ -69,26 +70,6 @@ short main(void) {
     return 0;
 }
 /*-----------------------------------------------------------*/
-
-void prvEchoTask(void *pv) {
-    (void) pv;
-    char rxB = 0;
-    char buffer[32];
-
-    //connect to my server:
-    esp8266AT_Connect("192.168.0.235", "1883");
-
-    for(;;) {
-        //receive msg
-        rxB = esp8266AT_recv(NULL, buffer, 32);
-
-        //echo received msg
-        if (rxB) {
-            esp8266AT_send(NULL, buffer, rxB);
-        }
-        vTaskDelay(DELAY_MS(200));
-    }
-}
 
 void vApplicationIdleHook(void) {
     //digitalIOToggle(mARDUINO_BUILTIN_LED);

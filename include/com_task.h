@@ -25,10 +25,12 @@
 #define COM_TASK_H
 
 #ifdef __cplusplus
-    extern "C" {
+extern "C" {
 #endif
 
-void prvCreateComTask(UBaseType_t uxPriority, unsigned long ulBaudRate,
+#include "FreeRTOS.h"
+
+BaseType_t createComTask(StackType_t stackSize, UBaseType_t priority, unsigned long ulBaudRate,
         QueueHandle_t dataQueue, char taskLED);
 
 #ifdef __cplusplus

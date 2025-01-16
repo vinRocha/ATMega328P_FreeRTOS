@@ -52,49 +52,53 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-/* Demo Specific configs. */
 #include "mqtt_task.h"
 
 /* MQTT library includes. */
 #include "core_mqtt.h"
 
-/* Exponential backoff retry include. */
-#include "backoff_algorithm.h"
-
 /* Transport interface implementation include header for esp8266AT connection. */
 #include "transport_esp8266.h"
 
-/*-----------------------------------------------------------*/
-
-/* Compile time error for undefined configs. */
-#ifndef democonfigMQTT_BROKER_ENDPOINT
-    #error "Define the config democonfigMQTT_BROKER_ENDPOINT by following the instructions in file demo_config.h."
-#endif
-/*-----------------------------------------------------------*/
-
-/* Default values for configs. */
-#ifndef democonfigCLIENT_IDENTIFIER
-
+#include "drivers/digital_io.h"
 /**
  * @brief The MQTT client identifier used in this example.  Each client identifier
  * must be unique so edit as required to ensure no two clients connecting to the
  * same broker use the same client identifier.
  *
- * @note Appending __TIME__ to the client id string will help to create a unique
- * client id every time an application binary is built. Only a single instance of
- * this application's compiled binary may be used at a time, since the client ID
- * will always be the same.
+ *!!! Please note a #defined constant is used for convenience of demonstration
+ *!!! only.  Production devices can use something unique to the device that can
+ *!!! be read by software, such as a production serial number, instead of a
+ *!!! hard coded constant.
+ *
+ * #define democonfigCLIENT_IDENTIFIER				"insert here."
  */
-    #define democonfigCLIENT_IDENTIFIER    "testClient"__TIME__
-#endif
+#define democonfigCLIENT_IDENTIFIER              "ARDUINO_UNO_R3"
 
-#ifndef democonfigMQTT_BROKER_PORT
+
+/**
+ * @brief MQTT broker end point to connect to.
+ *
+ * @note If you would like to setup an MQTT broker for running this demo,
+ * please see `mqtt_broker_setup.txt`.
+ *
+ * #define democonfigMQTT_BROKER_ENDPOINT				"insert here."
+ */
+#define democonfigMQTT_BROKER_ENDPOINT           "192.168.0.235"
+
 
 /**
  * @brief The port to use for the demo.
+ *
+ * #define democonfigMQTT_BROKER_PORT					( insert here. )
  */
-    #define democonfigMQTT_BROKER_PORT    ( 8883 )
-#endif
+#define democonfigMQTT_BROKER_PORT               "1883"
+
+
+/**
+ * @brief Size of the network buffer for MQTT packets.
+ */
+#define democonfigNETWORK_BUFFER_SIZE    ( 128U )
 
 /*-----------------------------------------------------------*/
 
@@ -233,19 +237,6 @@ struct NetworkContext
 static void prvMQTTDemoTask( void * pvParameters );
 
 /**
- * @brief Connect to MQTT broker with reconnection retries.
- *
- * If connection fails, retry is attempted after a timeout.
- * Timeout value will exponentially increase until the maximum
- * timeout value is reached or the number of attempts are exhausted.
- *
- * @param[out] pxNetworkContext The output parameter to return the created network context.
- *
- * @return The status of the final connection attempt.
- */
-static esp8266TransportStatus_t prvConnectToServerWithBackoffRetries( NetworkContext_t * pxNetworkContext );
-
-/**
  * @brief Sends an MQTT Connect packet over the already connected TLS over TCP connection.
  *
  * @param[in, out] pxMQTTContext MQTT context pointer.
@@ -345,6 +336,9 @@ static void prvInitializeTopicBuffers( void );
 
 /*-----------------------------------------------------------*/
 
+/* Task LED to indicate task is running */
+static char mLED;
+
 /**
  * @brief Static buffer used to hold MQTT messages being sent and received.
  */
@@ -424,7 +418,7 @@ static MQTTPubAckInfo_t pIncomingPublishRecords[ mqttexampleINCOMING_PUBLISH_REC
  * @brief Create the task that demonstrates the MQTT API Demo over a
  * server-authenticated network connection with MQTT broker.
  */
-void vStartSimpleMQTTDemo( void )
+BaseType_t createMQTTtask(StackType_t stackSize, UBaseType_t priority, char taskLED)
 {
     /* This example uses a single application task, which in turn is used to
      * connect, subscribe, publish, unsubscribe, and disconnect from the MQTT
@@ -437,12 +431,15 @@ void vStartSimpleMQTTDemo( void )
      * state or call the MQTT_ProcessLoop() API function. Using an agent task
      * also enables multiple application tasks to more easily share a single
      * MQTT connection. */
-    xTaskCreate( prvMQTTDemoTask,          /* Function that implements the task. */
-                 "coreMQTT",               /* Text name for the task - only used for debugging. */
-                 democonfigDEMO_STACKSIZE, /* Size of stack (in words, not bytes) to allocate for the task. */
-                 NULL,                     /* Task parameter - not used in this case. */
-                 tskIDLE_PRIORITY,         /* Task priority, must be between 0 and configMAX_PRIORITIES - 1. */
-                 NULL );                   /* Used to pass out a handle to the created task - not used in this case. */
+    mLED  = taskLED;
+    if (xTaskCreate(prvMQTTDemoTask,      /* Function that implements the task. */
+                 "coreMQTT",              /* Text name for the task - only used for debugging. */
+                 stackSize,               /* Size of stack (in words, not bytes) to allocate for the task. */
+                 NULL,                    /* Task parameter - not used in this case. */
+                 priority,                /* Task priority, must be between 0 and configMAX_PRIORITIES - 1. */
+                 NULL) != pdPASS)
+        return pdFAIL;
+    return pdPASS;
 }
 /*-----------------------------------------------------------*/
 
@@ -462,7 +459,6 @@ static void prvMQTTDemoTask( void * pvParameters )
 {
     uint32_t ulPublishCount = 0U, ulTopicCount = 0U;
     const uint32_t ulMaxPublishCount = 5UL;
-    NetworkContext_t *xNetworkContext = NULL;
     MQTTContext_t xMQTTContext = { 0 };
     MQTTStatus_t xMQTTStatus;
     esp8266TransportStatus_t xNetworkStatus;
@@ -478,6 +474,7 @@ static void prvMQTTDemoTask( void * pvParameters )
 
     for( ; ; )
     {
+        digitalIOToggle(mLED);
         //LogInfo( ( "---------STARTING DEMO---------\r\n" ) );
 
         /**************************** Initialize. *****************************/
@@ -485,17 +482,11 @@ static void prvMQTTDemoTask( void * pvParameters )
         prvInitializeTopicBuffers();
 
         /****************************** Connect. ******************************/
-
-        /* Attempt to establish a TLS connection with the MQTT broker. This example
-         * connects to the MQTT broker specified in democonfigMQTT_BROKER_ENDPOINT, using
-         * the port number specified in democonfigMQTT_BROKER_PORT (these macros are defined
-         * in file demo_config.h). If the connection fails, attempt to re-connect after a timeout.
-         * The timeout value will be exponentially increased until either the maximum timeout value
-         * is reached, or the maximum number of attempts are exhausted. The function returns a failure status
-         * if the TCP connection cannot be established with the broker after a configured number
-         * of attempts. */
-        xNetworkStatus = prvConnectToServerWithBackoffRetries( xNetworkContext );
-        configASSERT( xNetworkStatus == ESP8266_TRANSPORT_SUCCESS );
+        xNetworkStatus = esp8266AT_Connect(democonfigMQTT_BROKER_ENDPOINT, democonfigMQTT_BROKER_PORT);
+        if (xNetworkStatus != ESP8266_TRANSPORT_SUCCESS) {
+            digitalIOSet(mERROR_LED, pdTRUE);
+            for(;;){}
+        }
 
         /* Send an MQTT CONNECT packet over the established TLS connection,
          * and wait for the connection acknowledgment (CONNACK) packet. */
@@ -562,60 +553,6 @@ static void prvMQTTDemoTask( void * pvParameters )
         //LogInfo( ( "Short delay before starting the next iteration.... \r\n\r\n" ) );
         vTaskDelay( mqttexampleDELAY_BETWEEN_DEMO_ITERATIONS_TICKS );
     }
-}
-/*-----------------------------------------------------------*/
-
-static esp8266TransportStatus_t prvConnectToServerWithBackoffRetries( NetworkContext_t * pxNetworkContext )
-{
-    esp8266TransportStatus_t xNetworkStatus;
-    BackoffAlgorithmStatus_t xBackoffAlgStatus = BackoffAlgorithmSuccess;
-    BackoffAlgorithmContext_t xReconnectParams;
-    uint16_t usNextRetryBackOff = 0U;
-
-    /* Initialize reconnect attempts and interval.*/
-    BackoffAlgorithm_InitializeParams( &xReconnectParams,
-                                       mqttexampleRETRY_BACKOFF_BASE_MS,
-                                       mqttexampleRETRY_MAX_BACKOFF_DELAY_MS,
-                                       mqttexampleRETRY_MAX_ATTEMPTS );
-
-    /* Attempt to connect to MQTT broker. If connection fails, retry after
-     * a timeout. Timeout value will exponentially increase till maximum
-     * attempts are reached.
-     */
-    do
-    {
-        /* Establish a TCP connection with the MQTT broker. This example connects to
-         * the MQTT broker as specified in democonfigMQTT_BROKER_ENDPOINT and
-         * democonfigMQTT_BROKER_PORT at the top of this file. */
-        //LogInfo( ( "Create a TCP connection to %s:%d.",
-        //           democonfigMQTT_BROKER_ENDPOINT,
-        //           democonfigMQTT_BROKER_PORT ) );
-        xNetworkStatus = esp8266AT_Connect(democonfigMQTT_BROKER_ENDPOINT,
-                                           democonfigMQTT_BROKER_PORT);
-
-        if( xNetworkStatus != ESP8266_TRANSPORT_SUCCESS )
-        {
-            /* Generate a random number and calculate backoff value (in milliseconds) for
-             * the next connection retry.
-             * Note: It is recommended to seed the random number generator with a device-specific
-             * entropy source so that possibility of multiple devices retrying failed network operations
-             * at similar intervals can be avoided. */
-            xBackoffAlgStatus = BackoffAlgorithm_GetNextBackoff( &xReconnectParams, 0xff, &usNextRetryBackOff );
-
-            if( xBackoffAlgStatus == BackoffAlgorithmRetriesExhausted )
-            {
-                //LogError( ( "Connection to the broker failed, all attempts exhausted." ) );
-            }
-            else if( xBackoffAlgStatus == BackoffAlgorithmSuccess )
-            {
-                //LogWarn( ( "Connection to the broker failed. "
-                //           "Retrying connection with backoff and jitter." ) );
-                vTaskDelay( pdMS_TO_TICKS( usNextRetryBackOff ) );
-            }
-        }
-    } while( ( xNetworkStatus != ESP8266_TRANSPORT_SUCCESS ) && ( xBackoffAlgStatus == BackoffAlgorithmSuccess ) );
-
-    return xNetworkStatus;
 }
 /*-----------------------------------------------------------*/
 
@@ -704,9 +641,8 @@ static void prvUpdateSubAckStatus( MQTTPacketInfo_t * pxPacketInfo )
 static void prvMQTTSubscribeWithBackoffRetries( MQTTContext_t * pxMQTTContext )
 {
     MQTTStatus_t xResult = MQTTSuccess;
-    BackoffAlgorithmStatus_t xBackoffAlgStatus = BackoffAlgorithmSuccess;
-    BackoffAlgorithmContext_t xRetryParams;
-    uint16_t usNextRetryBackOff = 0U;
+    uint8_t counter = democonfigRETRY_MAX_ATTEMPTS;
+    uint16_t usNextRetryBackOff = 500U;
     MQTTSubscribeInfo_t xMQTTSubscription[ mqttexampleTOPIC_COUNT ];
     bool xFailedSubscribeToTopic = false;
     uint32_t ulTopicCount = 0U;
@@ -724,12 +660,6 @@ static void prvMQTTSubscribeWithBackoffRetries( MQTTContext_t * pxMQTTContext )
         xMQTTSubscription[ ulTopicCount ].pTopicFilter = xTopicFilterContext[ ulTopicCount ].pcTopicFilter;
         xMQTTSubscription[ ulTopicCount ].topicFilterLength = ( uint16_t ) strlen( xTopicFilterContext[ ulTopicCount ].pcTopicFilter );
     }
-
-    /* Initialize context for backoff retry attempts if SUBSCRIBE request fails. */
-    BackoffAlgorithm_InitializeParams( &xRetryParams,
-                                       mqttexampleRETRY_BACKOFF_BASE_MS,
-                                       mqttexampleRETRY_MAX_BACKOFF_DELAY_MS,
-                                       mqttexampleRETRY_MAX_ATTEMPTS );
 
     do
     {
@@ -780,17 +710,10 @@ static void prvMQTTSubscribeWithBackoffRetries( MQTTContext_t * pxMQTTContext )
                  * Note: It is recommended to seed the random number generator with a device-specific
                  * entropy source so that possibility of multiple devices retrying failed network operations
                  * at similar intervals can be avoided. */
-                xBackoffAlgStatus = BackoffAlgorithm_GetNextBackoff( &xRetryParams, 0xffff, &usNextRetryBackOff );
 
-                if( xBackoffAlgStatus == BackoffAlgorithmRetriesExhausted )
+                counter--;
+                if(counter)
                 {
-                    //LogError( ( "Server rejected subscription request. All retry attempts have exhausted. Topic=%s",
-                    //            xTopicFilterContext[ ulTopicCount ].pcTopicFilter ) );
-                }
-                else if( xBackoffAlgStatus == BackoffAlgorithmSuccess )
-                {
-                    //LogWarn( ( "Server rejected subscription request. Attempting to re-subscribe to topic %s.",
-                    //           xTopicFilterContext[ ulTopicCount ].pcTopicFilter ) );
                     /* Backoff before the next re-subscribe attempt. */
                     vTaskDelay( pdMS_TO_TICKS( usNextRetryBackOff ) );
                 }
@@ -798,9 +721,7 @@ static void prvMQTTSubscribeWithBackoffRetries( MQTTContext_t * pxMQTTContext )
                 break;
             }
         }
-
-        configASSERT( xBackoffAlgStatus != BackoffAlgorithmRetriesExhausted );
-    } while( ( xFailedSubscribeToTopic == true ) && ( xBackoffAlgStatus == BackoffAlgorithmSuccess ) );
+    } while( ( xFailedSubscribeToTopic == true ) && ( counter ) );
 }
 /*-----------------------------------------------------------*/
 

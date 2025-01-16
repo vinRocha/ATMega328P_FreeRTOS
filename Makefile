@@ -48,13 +48,12 @@ OPT = s
 SOURCE_DIR = ../Source
 PORT_DIR = ./portable/GCC/ATMega328P
 MQTT_DIR = ../../FreeRTOS-Plus/Source/Application-Protocols/coreMQTT/source
-BKOA_DIR = ../../FreeRTOS-Plus/Source/Utilities/backoff_algorithm/source
 
 CSRC	= \
 src/main.c \
+src/mqtt_task.c \
 src/drivers/digital_io.c \
 src/drivers/serial.c \
-src/mqtt_task.c \
 $(SOURCE_DIR)/tasks.c \
 $(SOURCE_DIR)/queue.c \
 $(SOURCE_DIR)/list.c \
@@ -63,7 +62,6 @@ $(PORT_DIR)/port.c \
 $(MQTT_DIR)/core_mqtt.c \
 $(MQTT_DIR)/core_mqtt_serializer.c \
 $(MQTT_DIR)/core_mqtt_state.c \
-$(BKOA_DIR)/backoff_algorithm.c
 
 CXXSRC = src/transport_esp8266.cpp
 
@@ -104,7 +102,7 @@ DEBUG_LEVEL=
 WARNINGS=-Wall -Wextra -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wsign-compare \
 		-Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wunused
 
-CFLAGS = -I./include -I../Source/include -I$(PORT_DIR) -I$(MQTT_DIR)/include -I$(BKOA_DIR)/include \
+CFLAGS = -I./include -I../Source/include -I$(PORT_DIR) -I$(MQTT_DIR)/include \
 $(DEBUG_LEVEL) -O$(OPT) \
 -fsigned-char -funsigned-bitfields -fpack-struct -fshort-enums \
 $(WARNINGS) \

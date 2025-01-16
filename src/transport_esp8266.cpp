@@ -32,15 +32,13 @@
 #include "drivers/serial.h"
 #include "drivers/digital_io.h"
 
-#define DELAY_MS(x)                     (TickType_t) (x / portTICK_PERIOD_MS)
-#define SLEEP                           vTaskDelay(DELAY_MS(200))
-#define BLOCK_MS(x)                     DELAY_MS(x)
+#define SLEEP                           vTaskDelay(pdMS_TO_TICKS(200))
+#define BLOCK_MS(x)                     pdMS_TO_TICKS(x)
 #define NO_BLOCK                        0x00
 #define TX_BLOCK                        0x00
 #define RX_BLOCK                        BLOCK_MS(10)
 
 //constants
-#define mSTACK_SIZE                     112
 const unsigned long BAUD_RATE =         115200;
 const int BUFFER_LEN =                  128;
 const int AT_REPLY_LEN =                7;
@@ -70,20 +68,20 @@ static void start_TCP(const char *pHostName, const char *port);
 static void stop_TCP();
 static void send_to_controlQ(int n, const char *c);
 
-esp8266TransportStatus_t prvCreateTransportTasks(UBaseType_t uxPriority, char taskLED) {
+BaseType_t createTransportTasks(StackType_t stackSize, UBaseType_t priority, char taskLED) {
 
     mLED = taskLED;
     xSerialPortInitMinimal(BAUD_RATE, BUFFER_LEN);
     controlQ = xQueueCreate(BUFFER_LEN/2, (UBaseType_t) sizeof(char));
     if (!controlQ)
-        return ESP8266_TRANSPORT_CONNECT_FAILURE;
+        return pdFAIL;
     dataQ = xQueueCreate(BUFFER_LEN, (UBaseType_t) sizeof(char));
     if (!dataQ)
-        return ESP8266_TRANSPORT_CONNECT_FAILURE;
-    if (xTaskCreate(rxThread, "COMRx", mSTACK_SIZE, NULL, uxPriority, NULL) != pdPASS)
-        return ESP8266_TRANSPORT_CONNECT_FAILURE;
+        return pdFAIL;
+    if (xTaskCreate(rxThread, "COMRx", stackSize, NULL, priority, NULL) != pdPASS)
+        return pdFAIL;
     esp8266_status = RX_THREAD_INITIALIZED;
-    return ESP8266_TRANSPORT_SUCCESS;
+    return pdPASS;
 }
 
 esp8266TransportStatus_t esp8266AT_Connect(const char *pHostName, const char *port) {
@@ -296,6 +294,7 @@ void rxThread(void *args) {
     //Very ugly code, but it works...
     //Keep running forever!!! Tasks cannot return!!!
     for(;;) {
+        digitalIOToggle(mLED);
         if (xSerialGetChar(NULL, (signed char*) &c[0], RX_BLOCK)) {
             if (c[0] == '+') {
                 while(!xSerialGetChar(NULL, (signed char*) &c[1], RX_BLOCK));

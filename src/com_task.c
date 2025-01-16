@@ -40,12 +40,14 @@
 static void vComTxTask(void *pvParameters);
 static char mLED;
 
-void prvCreateComTask(UBaseType_t uxPriority, unsigned long ulBaudRate,
+BaseType_t createComTask(StackType_t stackSize, UBaseType_t priority, unsigned long ulBaudRate,
         QueueHandle_t dataQueue, char taskLED) {
 
     mLED = taskLED;
     xSerialPortInitMinimal(ulBaudRate, serialBUFFER_LEN);
-    xTaskCreate(vComTxTask, "COMTx", mSTACK_SIZE, (void*) dataQueue, uxPriority, NULL);
+    if (xTaskCreate(vComTxTask, "COMTx", stackSize, (void*) dataQueue, priority, NULL) != pdPASS)
+        return pdFAIL;
+    return pdPASS;
 }
 /*-----------------------------------------------------------*/
 

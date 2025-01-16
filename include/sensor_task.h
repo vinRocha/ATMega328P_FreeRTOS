@@ -25,10 +25,12 @@
 #define SENSOR_TASK_H
 
 #ifdef __cplusplus
-    extern "C" {
+extern "C" {
 #endif
 
-void prvCreateSensorTask(UBaseType_t uxPriority, QueueHandle_t dataQueue, char taskLED);
+#include "FreeRTOS.h"
+
+BaseType_t createSensorTask(StackType_t stackSize, UBaseType_t priority, QueueHandle_t dataQueue, char taskLED);
 
 #ifdef __cplusplus
 }
