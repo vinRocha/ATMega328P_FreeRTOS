@@ -102,6 +102,8 @@
 
 /*-----------------------------------------------------------*/
 
+#define democonfigRETRY_MAX_ATTEMPTS  ( 5U )
+
 /**
  * @brief The maximum number of retries for network operation with server.
  */
@@ -491,7 +493,7 @@ static void prvMQTTDemoTask( void * pvParameters )
         /* Send an MQTT CONNECT packet over the established TLS connection,
          * and wait for the connection acknowledgment (CONNACK) packet. */
         //LogInfo( ( "Creating an MQTT connection to %s.\r\n", democonfigMQTT_BROKER_ENDPOINT ) );
-        prvCreateMQTTConnectionWithBroker( &xMQTTContext, xNetworkContext );
+        prvCreateMQTTConnectionWithBroker( &xMQTTContext, NULL );
 
         /**************************** Subscribe. ******************************/
 
