@@ -71,7 +71,7 @@ static void send_to_controlQ(int n, const char *c);
 BaseType_t createTransportTasks(StackType_t stackSize, UBaseType_t priority, char taskLED) {
 
     mLED = taskLED;
-    xSerialPortInitMinimal(BAUD_RATE, BUFFER_LEN);
+    xSerialPortInitMinimal(BAUD_RATE, BUFFER_LEN/2);
     controlQ = xQueueCreate(BUFFER_LEN/2, (UBaseType_t) sizeof(char));
     if (!controlQ)
         return pdFAIL;
