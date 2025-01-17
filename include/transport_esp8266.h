@@ -38,7 +38,7 @@ typedef enum esp8266TransportStatus {
     ESP8266_TRANSPORT_CONNECT_FAILURE = 3    /**< Initial connection to the server failed. */
 } esp8266TransportStatus_t;
 
-BaseType_t createTransportTasks(configSTACK_DEPTH_TYPE stackSize, UBaseType_t priority, char taskLED);
+BaseType_t esp8266Initialise(configSTACK_DEPTH_TYPE stackSize, UBaseType_t priority);
 
 //pHostName must be the target ipv4 address, port is the TCP target port number.
 esp8266TransportStatus_t esp8266AT_Connect(const char *pHostName, const char *port);

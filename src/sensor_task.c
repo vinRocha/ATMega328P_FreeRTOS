@@ -28,51 +28,35 @@
 #include "sensor_task.h"
 #include "drivers/digital_io.h"
 
-#define mSTACK_SIZE                     configMINIMAL_STACK_SIZE
+#define mLED                            mLED_0 //Debugging LED, PORTD bit 2;
+#define TRIG_PIN                        6      //PORTB bit 4;
+#define ECHO_PIN                        0x01   //PORTB bit 0;
 
-#define mNO_BLOCK                       (TickType_t) 0
-#define mDELAY_MS(x)                    (TickType_t) (x / portTICK_PERIOD_MS)
-
-#define TRIG_PIN                        6    //PORTB bit 4;
-#define ECHO_PIN                        0x01 //PORTB bit 0;
-
-static void vSensorTask(void *pvParameters);
 static void delayMicrosecond(char x);
-static char mLED;
 
-BaseType_t createSensorTask(StackType_t stackSize, UBaseType_t priority, QueueHandle_t dataQueue, char taskLED) {
+void sensorTask(void *pvParameters) {
 
-    mLED = taskLED;
-    if (xTaskCreate(vSensorTask, "Sensor", stackSize, (void*) dataQueue, priority, NULL) != pdPASS)
-        return pdFAIL;
-    return pdPASS;
-}
-/*-----------------------------------------------------------*/
-
-void vSensorTask(void *pvParameters) {
-
-//    float distance;
-    unsigned int interval, timeout;
+    sensor_distance distance;
+    unsigned int  timeout;
     QueueHandle_t dataQueue = (QueueHandle_t) pvParameters;
 
     for (;;) {
-        interval = 0;
+        distance.value = 0;
         timeout = 0;
         digitalIOToggle(mLED);
         digitalIOSet(TRIG_PIN, pdTRUE);
         delayMicrosecond(8);
         digitalIOSet(TRIG_PIN, pdFALSE);
-        while(!(PINB & ECHO_PIN) && (timeout < 65535)) {
+        while(!(PINB & ECHO_PIN) && (timeout < 0xffff)) {
             timeout++;
         }
-        while((PINB & ECHO_PIN) && (interval < 65535)) {
+        while((PINB & ECHO_PIN) && (distance.value < 0xffff)) {
             delayMicrosecond(1);
-            interval += 1;
+            distance.value++;
         }
-        interval += (interval/520 * 58); //correction factor 
-//        distance = ((float) interval * 0.0343) / 2;
-        xQueueSend(dataQueue, &interval, mDELAY_MS(500));
-        vTaskDelay(mDELAY_MS(3000));
+        distance.value += (distance.value/520 * 58); //correction factor for while conditional check
+        xQueueSend(dataQueue, &distance.value, pdMS_TO_TICKS(500));
+        vTaskDelay(pdMS_TO_TICKS(3000));
     }
 }
 /*-----------------------------------------------------------*/

@@ -22,22 +22,23 @@
  */
 #include "FreeRTOS.h"
 #include "FreeRTOSConfig.h"
+#include "projdefs.h"
 #include "task.h"
-#include "drivers/digital_io.h"
+#include "queue.h"
+#include "com_task.h"
+#include "sensor_task.h"
 #include "transport_esp8266.h"
-#include "mqtt_task.h"
+#include "drivers/digital_io.h"
 
 /* Tasks' priority definitions */
+#define m8266RX_PRIORITY           (tskIDLE_PRIORITY + 1)
+#define mSENSOR_PRIORITY           (tskIDLE_PRIORITY + 2)
 #define mCOM_PRIORITY              (tskIDLE_PRIORITY + 3)
-#define mMQTT_PRIORITY             (tskIDLE_PRIORITY + 1)
 
 /* Tasks' StackSize definitions */
-#define mCOM_STACK_SIZE                 104
-#define mMQTT_STACK_SIZE                280
-
-/* Tasks' debugging LED */
-#define mCOM_LED                        0
-#define mMQTT_LED                       1
+#define m8266RX_STACK_SIZE         112
+#define mSENSOR_STACK_SIZE         120
+#define mCOM_STACK_SIZE            180
 
 void vApplicationIdleHook(void);
 
@@ -46,18 +47,29 @@ short main(void) {
     /* Initialize Digital IO ports */
     digitalIOInitialise();
 
-    /* Create COM task */
-    if (createTransportTasks(mCOM_STACK_SIZE, mCOM_PRIORITY, mCOM_LED) != pdPASS) {
+    /* Initialize esp8266AT transport interface */
+    esp8266Initialise(m8266RX_STACK_SIZE, m8266RX_PRIORITY);
+
+    /* Create Queue for Sensor/COM tasks */
+    QueueHandle_t mQueue = xQueueCreate(1, (UBaseType_t) sizeof(sensor_distance));
+    if(!mQueue) {
+        digitalIOSet(mERROR_LED, pdTRUE);
         for (;;) {}
     }
 
-   /*  Create MQTT task */
-   if (createMQTTtask(mMQTT_STACK_SIZE, mMQTT_PRIORITY, mMQTT_LED) != pdPASS) {
+   /*  Create SENSOR task */
+   if (xTaskCreate(sensorTask, "sensorT", mSENSOR_STACK_SIZE, (void*) mQueue, mSENSOR_PRIORITY, NULL) != pdPASS) {
         digitalIOSet(mERROR_LED, pdTRUE);
         for (;;) {
             //for(ul = 0; ul < 0xfffff; ul++ ) {}
             //digitalIOToggle(mERROR_LED);
         }
+    }
+
+    /* Create COM task */
+    if (xTaskCreate(comTask, "comT", mCOM_STACK_SIZE, (void*) mQueue, mCOM_PRIORITY, NULL) != pdPASS) {
+        digitalIOSet(mERROR_LED, pdTRUE);
+        for (;;) {}
     }
 
     /* Start Tasks*/

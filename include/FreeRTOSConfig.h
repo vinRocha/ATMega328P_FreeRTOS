@@ -72,9 +72,12 @@ to exclude the API function. */
 /* Configure pdMS_TO_TICKS and pdTICKS_TO_MS */
 #define pdMS_TO_TICKS(x)                    ((TickType_t) x / portTICK_PERIOD_MS)
 #define pdTICKS_TO_MS(x)                    ((TickType_t) portTICK_PERIOD_MS * x)
+#define mNOBLOCK                            (TickType_t) 0
 
 /* Debuging LED */
 #define mARDUINO_BUILTIN_LED            7
+#define mLED_0                          0
+#define mLED_1                          1
 #define mERROR_LED                      2
 
 #endif /* FREERTOS_CONFIG_H */

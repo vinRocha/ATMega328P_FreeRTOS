@@ -21,50 +21,29 @@
  *
  */
 
-#include <stdio.h>
 #include "FreeRTOS.h"
+#include "FreeRTOSConfig.h"
 #include "task.h"
 #include "queue.h"
-
 #include "com_task.h"
-#include "drivers/serial.h"
+#include "sensor.h"
+#include "transport_esp8266.h"
 #include "drivers/digital_io.h"
 
-#define serialBUFFER_LEN                16
-#define mBUFFER_LEN                     20
-#define mSTACK_SIZE                     configMINIMAL_STACK_SIZE + mBUFFER_LEN * 2 + 36
+void comTask(void *pvParameters) {
 
-#define mNO_BLOCK                       (TickType_t) 0
-#define mDELAY_MS(x)                    (TickType_t) (x / portTICK_PERIOD_MS)
-
-static void vComTxTask(void *pvParameters);
-static char mLED;
-
-BaseType_t createComTask(StackType_t stackSize, UBaseType_t priority, unsigned long ulBaudRate,
-        QueueHandle_t dataQueue, char taskLED) {
-
-    mLED = taskLED;
-    xSerialPortInitMinimal(ulBaudRate, serialBUFFER_LEN);
-    if (xTaskCreate(vComTxTask, "COMTx", stackSize, (void*) dataQueue, priority, NULL) != pdPASS)
-        return pdFAIL;
-    return pdPASS;
-}
-/*-----------------------------------------------------------*/
-
-void vComTxTask(void *pvParameters) {
-
-    float distance;
-    //"distance: 000.000\r\n" - size: 20
-    char msg[mBUFFER_LEN];
+    sensor_distance distance;
     QueueHandle_t dataQueue = (QueueHandle_t)pvParameters;
 
+    while (esp8266AT_Connect("192.168.0.235", "1883") != ESP8266_TRANSPORT_SUCCESS) {
+        vTaskDelay(pdMS_TO_TICKS(3000));
+    }
+
     for (;;) {
-        digitalIOToggle(mLED);
-        if (xQueueReceive(dataQueue, &distance, mDELAY_MS(200))) {
-            snprintf(msg, mBUFFER_LEN, "distance: %7.3f\r\n", distance);
-            for (int i = 0; msg[i]; i++) {
-                xSerialPutChar(NULL, msg[i], mNO_BLOCK);
-            }
+        digitalIOToggle(mLED_1);
+        if (xQueueReceive(dataQueue, &distance, pdMS_TO_TICKS(5000))) {
+            esp8266AT_send(NULL, "+", 1);
+            esp8266AT_send(NULL, distance.bytes, 2);
         }
     }
 }

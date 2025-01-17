@@ -21,14 +21,17 @@
  *
  */
 
-#ifndef COM_TASK_H
-#define COM_TASK_H
+#ifndef SENSOR_H
+#define SENSOR_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void comTask(void *pvParamenters);
+typedef union sensor_distance {
+    char bytes[0];
+    unsigned int value;
+} sensor_distance;
 
 #ifdef __cplusplus
 }

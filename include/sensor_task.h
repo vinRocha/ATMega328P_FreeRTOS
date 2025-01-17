@@ -28,9 +28,9 @@
 extern "C" {
 #endif
 
-#include "FreeRTOS.h"
+#include "sensor.h"
 
-BaseType_t createSensorTask(StackType_t stackSize, UBaseType_t priority, QueueHandle_t dataQueue, char taskLED);
+void sensorTask(void *pvParameters);
 
 #ifdef __cplusplus
 }

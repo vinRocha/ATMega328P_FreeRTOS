@@ -60,7 +60,6 @@ enum transportStatus {
 static QueueHandle_t controlQ;
 static QueueHandle_t dataQ;
 static char esp8266_status = AT_UNINITIALIZED;
-static char mLED;
 
 static void rxThread(void *args);
 static void check_AT();
@@ -68,9 +67,8 @@ static void start_TCP(const char *pHostName, const char *port);
 static void stop_TCP();
 static void send_to_controlQ(int n, const char *c);
 
-BaseType_t createTransportTasks(configSTACK_DEPTH_TYPE stackSize, UBaseType_t priority, char taskLED) {
+BaseType_t esp8266Initialise(configSTACK_DEPTH_TYPE stackSize, UBaseType_t priority) {
 
-    mLED = taskLED;
     xSerialPortInitMinimal(BAUD_RATE, BUFFER_LEN);
     controlQ = xQueueCreate(BUFFER_LEN/2, (UBaseType_t) sizeof(char));
     if (!controlQ)
@@ -78,7 +76,7 @@ BaseType_t createTransportTasks(configSTACK_DEPTH_TYPE stackSize, UBaseType_t pr
     dataQ = xQueueCreate(BUFFER_LEN, (UBaseType_t) sizeof(char));
     if (!dataQ)
         return pdFAIL;
-    if (xTaskCreate(rxThread, "COMRx", stackSize, NULL, priority, NULL) != pdPASS)
+    if (xTaskCreate(rxThread, "8266RX", stackSize, NULL, priority, NULL) != pdPASS)
         return pdFAIL;
     esp8266_status = RX_THREAD_INITIALIZED;
     return pdPASS;
@@ -294,7 +292,6 @@ void rxThread(void *args) {
     //Very ugly code, but it works...
     //Keep running forever!!! Tasks cannot return!!!
     for(;;) {
-        digitalIOToggle(mLED);
         if (xSerialGetChar(NULL, (signed char*) &c[0], RX_BLOCK)) {
             if (c[0] == '+') {
                 while(!xSerialGetChar(NULL, (signed char*) &c[1], RX_BLOCK));
