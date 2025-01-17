@@ -51,7 +51,8 @@ MQTT_DIR = ../../FreeRTOS-Plus/Source/Application-Protocols/coreMQTT/source
 
 CSRC	= \
 src/main.c \
-src/mqtt_task.c \
+src/com_task.c \
+src/sensor_task.c \
 src/drivers/digital_io.c \
 src/drivers/serial.c \
 $(SOURCE_DIR)/tasks.c \
@@ -59,9 +60,10 @@ $(SOURCE_DIR)/queue.c \
 $(SOURCE_DIR)/list.c \
 $(SOURCE_DIR)/portable/MemMang/heap_1.c \
 $(PORT_DIR)/port.c \
-$(MQTT_DIR)/core_mqtt.c \
-$(MQTT_DIR)/core_mqtt_serializer.c \
-$(MQTT_DIR)/core_mqtt_state.c \
+
+#$(MQTT_DIR)/core_mqtt.c \
+#$(MQTT_DIR)/core_mqtt_serializer.c \
+#$(MQTT_DIR)/core_mqtt_state.c \
 
 CXXSRC = src/transport_esp8266.cpp
 
