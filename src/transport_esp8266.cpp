@@ -40,7 +40,7 @@
 
 //constants
 const unsigned long BAUD_RATE =         115200;
-const int BUFFER_LEN =                  128;
+const int BUFFER_LEN =                  32;
 const int AT_REPLY_LEN =                7;
 
 enum transportStatus {
@@ -68,10 +68,10 @@ static void start_TCP(const char *pHostName, const char *port);
 static void stop_TCP();
 static void send_to_controlQ(int n, const char *c);
 
-BaseType_t createTransportTasks(StackType_t stackSize, UBaseType_t priority, char taskLED) {
+BaseType_t createTransportTasks(configSTACK_DEPTH_TYPE stackSize, UBaseType_t priority, char taskLED) {
 
     mLED = taskLED;
-    xSerialPortInitMinimal(BAUD_RATE, BUFFER_LEN/2);
+    xSerialPortInitMinimal(BAUD_RATE, BUFFER_LEN);
     controlQ = xQueueCreate(BUFFER_LEN/2, (UBaseType_t) sizeof(char));
     if (!controlQ)
         return pdFAIL;
@@ -157,7 +157,7 @@ int32_t esp8266AT_send(NetworkContext_t *pNetworkContext, const void *pBuffer, s
         while (xQueueReceive(controlQ, &c, BLOCK_MS(200)) > 0);
     }
 
-    snprintf(&command[11], 5, "%d", (int) bytesToSend);
+    snprintf(&command[11], 5, "%u", bytesToSend);
     //Send AT command
     for(int i = 0; command[i]; i++) {
         xSerialPutChar(NULL, command[i], TX_BLOCK);

@@ -73,7 +73,7 @@
  *
  * #define democonfigCLIENT_IDENTIFIER				"insert here."
  */
-#define democonfigCLIENT_IDENTIFIER              "ARDUINO_UNO_R3"
+#define democonfigCLIENT_IDENTIFIER              "ARDUINO"
 
 
 /**
@@ -98,7 +98,7 @@
 /**
  * @brief Size of the network buffer for MQTT packets.
  */
-#define democonfigNETWORK_BUFFER_SIZE    ( 128U )
+#define democonfigNETWORK_BUFFER_SIZE    ( 32U )
 
 /*-----------------------------------------------------------*/
 
@@ -420,7 +420,7 @@ static MQTTPubAckInfo_t pIncomingPublishRecords[ mqttexampleINCOMING_PUBLISH_REC
  * @brief Create the task that demonstrates the MQTT API Demo over a
  * server-authenticated network connection with MQTT broker.
  */
-BaseType_t createMQTTtask(StackType_t stackSize, UBaseType_t priority, char taskLED)
+BaseType_t createMQTTtask(configSTACK_DEPTH_TYPE stackSize, UBaseType_t priority, char taskLED)
 {
     /* This example uses a single application task, which in turn is used to
      * connect, subscribe, publish, unsubscribe, and disconnect from the MQTT
@@ -486,8 +486,10 @@ static void prvMQTTDemoTask( void * pvParameters )
         /****************************** Connect. ******************************/
         xNetworkStatus = esp8266AT_Connect(democonfigMQTT_BROKER_ENDPOINT, democonfigMQTT_BROKER_PORT);
         if (xNetworkStatus != ESP8266_TRANSPORT_SUCCESS) {
-            digitalIOSet(mERROR_LED, pdTRUE);
-            for(;;){}
+            for(;;){
+                digitalIOToggle(mERROR_LED);
+                vTaskDelay(pdMS_TO_TICKS(300));
+            }
         }
 
         /* Send an MQTT CONNECT packet over the established TLS connection,

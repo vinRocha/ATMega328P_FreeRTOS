@@ -20,29 +20,24 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  */
-
-#include <stdio.h>
 #include "FreeRTOS.h"
+#include "FreeRTOSConfig.h"
 #include "task.h"
-#include "queue.h"
 #include "drivers/digital_io.h"
 #include "transport_esp8266.h"
 #include "mqtt_task.h"
 
 /* Tasks' priority definitions */
-#define mCOM_PRIORITY              (tskIDLE_PRIORITY + 4)
-#define mMQTT_PRIORITY             (tskIDLE_PRIORITY + 3)
+#define mCOM_PRIORITY              (tskIDLE_PRIORITY + 3)
+#define mMQTT_PRIORITY             (tskIDLE_PRIORITY + 1)
 
 /* Tasks' StackSize definitions */
-#define mCOM_STACK_SIZE                 112
-#define mMQTT_STACK_SIZE                181
+#define mCOM_STACK_SIZE                 104
+#define mMQTT_STACK_SIZE                280
 
 /* Tasks' debugging LED */
 #define mCOM_LED                        0
 #define mMQTT_LED                       1
-
-/* The period between executions of the check task. */
-#define DELAY_MS(x)                     (TickType_t) (x / portTICK_PERIOD_MS)
 
 void vApplicationIdleHook(void);
 
@@ -53,14 +48,16 @@ short main(void) {
 
     /* Create COM task */
     if (createTransportTasks(mCOM_STACK_SIZE, mCOM_PRIORITY, mCOM_LED) != pdPASS) {
-        digitalIOSet(mERROR_LED, pdTRUE);
-        for (;;) {};
+        for (;;) {}
     }
 
-    /* Create Echo task */
+   /*  Create MQTT task */
    if (createMQTTtask(mMQTT_STACK_SIZE, mMQTT_PRIORITY, mMQTT_LED) != pdPASS) {
         digitalIOSet(mERROR_LED, pdTRUE);
-        for (;;) {};
+        for (;;) {
+            //for(ul = 0; ul < 0xfffff; ul++ ) {}
+            //digitalIOToggle(mERROR_LED);
+        }
     }
 
     /* Start Tasks*/
