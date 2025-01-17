@@ -22,28 +22,29 @@
  */
 
 #include "FreeRTOS.h"
-#include "FreeRTOSConfig.h"
 #include "task.h"
 #include "queue.h"
 #include "com_task.h"
-#include "sensor.h"
 #include "transport_esp8266.h"
 #include "drivers/digital_io.h"
+#include "hcsr04.h"
+
+#define mLED                 mLED_1 //Debugging LED, PORTD bit 3
 
 void comTask(void *pvParameters) {
 
-    sensor_distance distance;
-    QueueHandle_t dataQueue = (QueueHandle_t)pvParameters;
+    hcsr04_t interval;
+    QueueHandle_t dataQueue = (QueueHandle_t) pvParameters;
 
     while (esp8266AT_Connect("192.168.0.235", "1883") != ESP8266_TRANSPORT_SUCCESS) {
         vTaskDelay(pdMS_TO_TICKS(3000));
     }
 
     for (;;) {
-        digitalIOToggle(mLED_1);
-        if (xQueueReceive(dataQueue, &distance, pdMS_TO_TICKS(5000))) {
+        digitalIOToggle(mLED);
+        if (xQueueReceive(dataQueue, &interval, pdMS_TO_TICKS(5000))) {
             esp8266AT_send(NULL, "+", 1);
-            esp8266AT_send(NULL, distance.bytes, 2);
+            esp8266AT_send(NULL, &interval, sizeof(interval));
         }
     }
 }

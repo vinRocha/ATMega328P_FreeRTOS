@@ -45,7 +45,7 @@
 #define configTICK_RATE_HZ                  ( ( TickType_t ) 1000 )
 #define configMAX_PRIORITIES                ( 4 )
 #define configMINIMAL_STACK_SIZE            ( ( unsigned short ) 85 )
-#define configTOTAL_HEAP_SIZE               ( (size_t ) ( 830 ) )
+#define configTOTAL_HEAP_SIZE               ( (size_t ) ( 1500 ) )
 #define configMAX_TASK_NAME_LEN             ( 8 )
 #define configUSE_TRACE_FACILITY            0
 #define configUSE_16_BIT_TICKS              1
@@ -75,9 +75,9 @@ to exclude the API function. */
 #define mNOBLOCK                            (TickType_t) 0
 
 /* Debuging LED */
-#define mARDUINO_BUILTIN_LED            7
-#define mLED_0                          0
-#define mLED_1                          1
-#define mERROR_LED                      2
+#define mARDUINO_BUILTIN_LED            7 //PORTB bit 5;
+#define mLED_0                          0 //PORTD bit 2;
+#define mLED_1                          1 //PORTD bit 3;
+#define mERROR_LED                      2 //PORTD bit 4;
 
 #endif /* FREERTOS_CONFIG_H */

@@ -21,17 +21,14 @@
  *
  */
 
-#ifndef SENSOR_H
-#define SENSOR_H
+#ifndef HCSR04_H
+#define HCSR04_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef union sensor_distance {
-    char bytes[0];
-    unsigned int value;
-} sensor_distance;
+typedef unsigned int hcsr04_t;
 
 #ifdef __cplusplus
 }

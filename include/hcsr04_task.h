@@ -21,16 +21,16 @@
  *
  */
 
-#ifndef SENSOR_TASK_H
-#define SENSOR_TASK_H
+#ifndef HCSR04_TASK_H
+#define HCSR04_TASK_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "sensor.h"
+#include "hcsr04.h"
 
-void sensorTask(void *pvParameters);
+void hcsr04Task(void *pvParameters);
 
 #ifdef __cplusplus
 }

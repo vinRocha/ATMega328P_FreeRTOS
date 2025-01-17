@@ -25,7 +25,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
-#include "sensor_task.h"
+#include "hcsr04_task.h"
 #include "drivers/digital_io.h"
 
 #define mLED                            mLED_0 //Debugging LED, PORTD bit 2;
@@ -34,14 +34,14 @@
 
 static void delayMicrosecond(char x);
 
-void sensorTask(void *pvParameters) {
+void hcsr04Task(void *pvParameters) {
 
-    sensor_distance distance;
-    unsigned int  timeout;
+    hcsr04_t interval;
+    unsigned int timeout;
     QueueHandle_t dataQueue = (QueueHandle_t) pvParameters;
 
     for (;;) {
-        distance.value = 0;
+        interval = 0;
         timeout = 0;
         digitalIOToggle(mLED);
         digitalIOSet(TRIG_PIN, pdTRUE);
@@ -50,12 +50,12 @@ void sensorTask(void *pvParameters) {
         while(!(PINB & ECHO_PIN) && (timeout < 0xffff)) {
             timeout++;
         }
-        while((PINB & ECHO_PIN) && (distance.value < 0xffff)) {
+        while((PINB & ECHO_PIN) && (interval < 0xffff)) {
             delayMicrosecond(1);
-            distance.value++;
+            interval++;
         }
-        distance.value += (distance.value/520 * 58); //correction factor for while conditional check
-        xQueueSend(dataQueue, &distance.value, pdMS_TO_TICKS(500));
+        interval += (interval/520 * 58); //correction factor for while conditional check
+        xQueueSend(dataQueue, &interval, pdMS_TO_TICKS(500));
         vTaskDelay(pdMS_TO_TICKS(3000));
     }
 }
