@@ -54,7 +54,7 @@ void hcsr04Task(void *pvParameters) {
             interval++;
         }
         //interval += (interval/520 * 58); //correction factor for while conditional check
-        interval = uxTaskGetStackHighWaterMark(NULL);
+        //interval = uxTaskGetStackHighWaterMark(NULL);
         xQueueSend((QueueHandle_t) pvParameters, &interval, pdMS_TO_TICKS(500));
         vTaskDelay(pdMS_TO_TICKS(3000));
     }

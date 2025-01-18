@@ -68,7 +68,7 @@ static void start_TCP(const char *pHostName, const char *port);
 static void stop_TCP();
 static void send_to_controlQ(int n, const char *c);
 
-BaseType_t esp8266Initialise(configSTACK_DEPTH_TYPE stackSize, UBaseType_t priority) {
+BaseType_t esp8266Initialise(configSTACK_DEPTH_TYPE stackSize, void *pvParameters, UBaseType_t priority) {
 
     xSerialPortInitMinimal(BAUD_RATE, BUFFER_LEN);
     controlQ = xQueueCreate(BUFFER_LEN/4, (UBaseType_t) sizeof(char));
@@ -77,7 +77,7 @@ BaseType_t esp8266Initialise(configSTACK_DEPTH_TYPE stackSize, UBaseType_t prior
     dataQ = xQueueCreate(BUFFER_LEN, (UBaseType_t) sizeof(char));
     if (!dataQ)
         return pdFAIL;
-    if (xTaskCreate(rxThread, "8266RX", stackSize, NULL, priority, NULL) != pdPASS)
+    if (xTaskCreate(rxThread, "8266RX", stackSize, pvParameters, priority, NULL) != pdPASS)
         return pdFAIL;
     esp8266_status = RX_THREAD_INITIALIZED;
     return pdPASS;
@@ -319,6 +319,8 @@ void rxThread(void *args) {
                                     while(!xSerialGetChar(NULL, (signed char*) c, RX_BLOCK));
                                     xQueueSend(dataQ, c, BLOCK_MS(200));
                                 }
+                                *c = uxTaskGetStackHighWaterMark(NULL);
+                                xQueueSend((QueueHandle_t) args, c, pdMS_TO_TICKS(200));
                             }
                             else {
                                 send_to_controlQ(5, c);

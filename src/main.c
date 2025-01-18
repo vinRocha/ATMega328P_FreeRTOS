@@ -42,17 +42,27 @@ void vApplicationIdleHook(void);
 
 short main(void) {
 
+    QueueHandle_t mQueue;
+
     /* Initialize Digital IO ports */
     digitalIOInitialise();
 
+    mQueue = xQueueCreate(1, sizeof(unsigned int));
+
     /* Initialize esp8266AT transport interface */
-    if (esp8266Initialise(m8266RX_STACK_SIZE, m8266RX_PRIORITY) != pdPASS) {
+    if (esp8266Initialise(m8266RX_STACK_SIZE, (void*) mQueue, m8266RX_PRIORITY) != pdPASS) {
+        digitalIOSet(mERROR_LED, pdTRUE);
+        for (;;) {}
+    }
+
+    /* Create COM task */
+    if (xTaskCreate(comTask, "comT", mCOM_STACK_SIZE, (void*) mQueue, mCOM_PRIORITY, NULL) != pdPASS) {
         digitalIOSet(mERROR_LED, pdTRUE);
         for (;;) {}
     }
 
     /* Create Queue for Sensor/COM tasks */
-    QueueHandle_t mQueue = xQueueCreate(1, sizeof(hcsr04_t));
+    mQueue = xQueueCreate(1, sizeof(hcsr04_t));
     if(!mQueue) {
         digitalIOSet(mERROR_LED, pdTRUE);
         for (;;) {}
@@ -60,13 +70,6 @@ short main(void) {
 
    /*  Create Sensor task */
    if (xTaskCreate(hcsr04Task, "hcsr04T", mHCSR04_STACK_SIZE, (void*) mQueue, mHCSR04_PRIORITY, NULL) != pdPASS) {
-        digitalIOSet(mERROR_LED, pdTRUE);
-        for (;;) {
-        }
-    }
-
-    /* Create COM task */
-    if (xTaskCreate(comTask, "comT", mCOM_STACK_SIZE, (void*) mQueue, mCOM_PRIORITY, NULL) != pdPASS) {
         digitalIOSet(mERROR_LED, pdTRUE);
         for (;;) {}
     }
