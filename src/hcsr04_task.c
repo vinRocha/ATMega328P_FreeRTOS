@@ -50,10 +50,11 @@ void hcsr04Task(void *pvParameters) {
             timeout++;
         }
         while((PINB & ECHO_PIN) && (interval < 0xffff)) {
-            //delayMicrosecond(1);
             interval++;
         }
-        //interval += (interval/520 * 58); //correction factor for while conditional check
+        //Correction factor for while conditional. Consumes 19 CPU clock every interation.
+        //16 CPU clocks eqs 1us
+        interval += (interval / 16) * 3 + 1;
         xQueueSend((QueueHandle_t) pvParameters, &interval, pdMS_TO_TICKS(500));
         vTaskDelay(pdMS_TO_TICKS(3000));
     }
