@@ -45,7 +45,7 @@ void comTask(void *pvParameters) {
             esp8266AT_send(NULL, "+", 1);
             esp8266AT_send(NULL, &interval, sizeof(interval));
             //consume received data....
-            while(esp8266AT_recv(NULL, &interval, sizeof(interval));
+            while(esp8266AT_recv(NULL, &interval, sizeof(interval)));
         }
     }
 }

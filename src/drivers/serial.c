@@ -72,7 +72,7 @@ xComPortHandle xSerialPortInitMinimal(unsigned long ulWantedBaud, unsigned portB
 	{
 		/* Create the queues used by the com test task. */
 		xRxedChars = xQueueCreate( uxQueueLength, ( unsigned portBASE_TYPE ) sizeof( signed char ) );
-		xCharsForTx = xQueueCreate( uxQueueLength, ( unsigned portBASE_TYPE ) sizeof( signed char ) );
+		xCharsForTx = xQueueCreate( uxQueueLength/2, ( unsigned portBASE_TYPE ) sizeof( signed char ) );
 
 		/* Calculate the baud rate register value from the equation in the
 		data sheet. */

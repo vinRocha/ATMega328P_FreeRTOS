@@ -41,7 +41,7 @@
 
 //constants
 const unsigned long BAUD_RATE =         115200;
-const int BUFFER_LEN =                  32;
+const int BUFFER_LEN =                  128;
 const int AT_REPLY_LEN =                7;
 
 enum transportStatus {
@@ -71,7 +71,7 @@ static void send_to_controlQ(int n, const char *c);
 BaseType_t esp8266Initialise(configSTACK_DEPTH_TYPE stackSize, UBaseType_t priority) {
 
     xSerialPortInitMinimal(BAUD_RATE, BUFFER_LEN);
-    controlQ = xQueueCreate(BUFFER_LEN/2, (UBaseType_t) sizeof(char));
+    controlQ = xQueueCreate(BUFFER_LEN/4, (UBaseType_t) sizeof(char));
     if (!controlQ)
         return pdFAIL;
     dataQ = xQueueCreate(BUFFER_LEN, (UBaseType_t) sizeof(char));
