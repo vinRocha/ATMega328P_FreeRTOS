@@ -21,7 +21,6 @@
  *
  */
 #include "FreeRTOS.h"
-#include "hcsr04.h"
 #include "task.h"
 #include "queue.h"
 #include "com_task.h"
@@ -30,13 +29,13 @@
 #include "drivers/digital_io.h"
 
 /* Tasks' priority definitions */
-#define m8266RX_PRIORITY           (tskIDLE_PRIORITY + 3)
-#define mHCSR04_PRIORITY           (tskIDLE_PRIORITY + 2)
+#define mHCSR04_PRIORITY           (tskIDLE_PRIORITY + 3)
+#define m8266RX_PRIORITY           (tskIDLE_PRIORITY + 2)
 #define mCOM_PRIORITY              (tskIDLE_PRIORITY + 1)
 
 /* Tasks' StackSize definitions */
-#define m8266RX_STACK_SIZE         112
 #define mHCSR04_STACK_SIZE         120
+#define m8266RX_STACK_SIZE         112
 #define mCOM_STACK_SIZE            180
 
 void vApplicationIdleHook(void);
@@ -53,14 +52,14 @@ short main(void) {
     }
 
     /* Create Queue for Sensor/COM tasks */
-    QueueHandle_t mQueue = xQueueCreate(1, (UBaseType_t) sizeof(hcsr04_t));
+    QueueHandle_t mQueue = xQueueCreate(1, sizeof(hcsr04_t));
     if(!mQueue) {
         digitalIOSet(mERROR_LED, pdTRUE);
         for (;;) {}
     }
 
    /*  Create Sensor task */
-   if (xTaskCreate(hcsr04Task, "sensorT", mHCSR04_STACK_SIZE, (void*) mQueue, mHCSR04_PRIORITY, NULL) != pdPASS) {
+   if (xTaskCreate(hcsr04Task, "hcsr04T", mHCSR04_STACK_SIZE, (void*) mQueue, mHCSR04_PRIORITY, NULL) != pdPASS) {
         digitalIOSet(mERROR_LED, pdTRUE);
         for (;;) {
         }

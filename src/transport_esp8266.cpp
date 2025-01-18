@@ -292,7 +292,7 @@ void rxThread(void *args) {
     //Very ugly code, but it works...
     //Keep running forever!!! Tasks cannot return!!!
     for(;;) {
-        if (xSerialGetChar(NULL, (signed char*) &c[0], pdMS_TO_TICKS(2000))) {
+        if (xSerialGetChar(NULL, (signed char*) &c[0], pdMS_TO_TICKS(5000))) {
             if (c[0] == '+') {
                 while(!xSerialGetChar(NULL, (signed char*) &c[1], RX_BLOCK));
                 if (c[1] == 'I') {
