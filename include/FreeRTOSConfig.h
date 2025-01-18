@@ -67,7 +67,7 @@ to exclude the API function. */
 #define INCLUDE_vTaskSuspend                0
 #define INCLUDE_vTaskDelayUntil             0
 #define INCLUDE_vTaskDelay                  1
-#define INCLUDE_uxTaskGetStackHighWaterMark 0
+#define INCLUDE_uxTaskGetStackHighWaterMark 1
 
 /* Configure pdMS_TO_TICKS and pdTICKS_TO_MS */
 #define pdMS_TO_TICKS(x)                    ((TickType_t) x / portTICK_PERIOD_MS)

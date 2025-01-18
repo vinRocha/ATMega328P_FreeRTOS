@@ -42,6 +42,7 @@ void comTask(void *pvParameters) {
     for (;;) {
         digitalIOToggle(mLED);
         if (xQueueReceive((QueueHandle_t) pvParameters, &interval, pdMS_TO_TICKS(5000))) {
+            interval = uxTaskGetStackHighWaterMark(NULL);
             esp8266AT_send(NULL, "+", 1);
             esp8266AT_send(NULL, &interval, sizeof(interval));
             //consume received data....
