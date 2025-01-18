@@ -38,7 +38,6 @@ void hcsr04Task(void *pvParameters) {
 
     hcsr04_t interval;
     unsigned int timeout;
-    QueueHandle_t dataQueue = (QueueHandle_t) pvParameters;
 
     for (;;) {
         interval = 0;
@@ -55,7 +54,7 @@ void hcsr04Task(void *pvParameters) {
             interval++;
         }
         //interval += (interval/520 * 58); //correction factor for while conditional check
-        xQueueSend(dataQueue, &interval, pdMS_TO_TICKS(500));
+        xQueueSend((QueueHandle_t) pvParameters, &interval, pdMS_TO_TICKS(500));
         vTaskDelay(pdMS_TO_TICKS(3000));
     }
 }

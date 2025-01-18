@@ -34,9 +34,9 @@
 #define mCOM_PRIORITY              (tskIDLE_PRIORITY + 1)
 
 /* Tasks' StackSize definitions */
-#define mHCSR04_STACK_SIZE         120
-#define m8266RX_STACK_SIZE         112
-#define mCOM_STACK_SIZE            180
+#define mHCSR04_STACK_SIZE         configMINIMAL_STACK_SIZE
+#define m8266RX_STACK_SIZE         100
+#define mCOM_STACK_SIZE            123
 
 void vApplicationIdleHook(void);
 

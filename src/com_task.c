@@ -34,7 +34,6 @@
 void comTask(void *pvParameters) {
 
     hcsr04_t interval;
-    QueueHandle_t dataQueue = (QueueHandle_t) pvParameters;
 
     while (esp8266AT_Connect("192.168.0.235", "1883") != ESP8266_TRANSPORT_SUCCESS) {
         vTaskDelay(pdMS_TO_TICKS(3000));
@@ -42,7 +41,7 @@ void comTask(void *pvParameters) {
 
     for (;;) {
         digitalIOToggle(mLED);
-        if (xQueueReceive(dataQueue, &interval, pdMS_TO_TICKS(5000))) {
+        if (xQueueReceive((QueueHandle_t) pvParameters, &interval, pdMS_TO_TICKS(5000))) {
             esp8266AT_send(NULL, "+", 1);
             esp8266AT_send(NULL, &interval, sizeof(interval));
             //consume received data....
