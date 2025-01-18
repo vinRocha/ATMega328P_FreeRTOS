@@ -51,10 +51,10 @@ void hcsr04Task(void *pvParameters) {
             timeout++;
         }
         while((PINB & ECHO_PIN) && (interval < 0xffff)) {
-            delayMicrosecond(1);
+            //delayMicrosecond(1);
             interval++;
         }
-        interval += (interval/520 * 58); //correction factor for while conditional check
+        //interval += (interval/520 * 58); //correction factor for while conditional check
         xQueueSend(dataQueue, &interval, pdMS_TO_TICKS(500));
         vTaskDelay(pdMS_TO_TICKS(3000));
     }
