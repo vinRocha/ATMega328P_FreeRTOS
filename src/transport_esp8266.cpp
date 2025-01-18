@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "transport_esp8266.h"
+#include "FreeRTOSConfig.h"
 #include "task.h"
 #include "queue.h"
 #include "drivers/serial.h"
@@ -292,6 +293,7 @@ void rxThread(void *args) {
     //Very ugly code, but it works...
     //Keep running forever!!! Tasks cannot return!!!
     for(;;) {
+        digitalIOToggle(mARDUINO_BUILTIN_LED);
         if (xSerialGetChar(NULL, (signed char*) &c[0], pdMS_TO_TICKS(5000))) {
             if (c[0] == '+') {
                 while(!xSerialGetChar(NULL, (signed char*) &c[1], RX_BLOCK));

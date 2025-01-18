@@ -45,6 +45,8 @@ void comTask(void *pvParameters) {
         if (xQueueReceive(dataQueue, &interval, pdMS_TO_TICKS(5000))) {
             esp8266AT_send(NULL, "+", 1);
             esp8266AT_send(NULL, &interval, sizeof(interval));
+            //consume received data....
+            while(esp8266AT_recv(NULL, &interval, sizeof(interval));
         }
     }
 }
