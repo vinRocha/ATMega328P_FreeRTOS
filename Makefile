@@ -51,8 +51,8 @@ MQTT_DIR = ../../FreeRTOS-Plus/Source/Application-Protocols/coreMQTT/source
 
 CSRC	= \
 src/main.c \
-src/com_task.c \
-src/hcsr04_task.c \
+src/mqtt_task.c \
+src/transport_esp8266.c \
 src/drivers/digital_io.c \
 src/drivers/serial.c \
 $(SOURCE_DIR)/tasks.c \
@@ -60,12 +60,11 @@ $(SOURCE_DIR)/queue.c \
 $(SOURCE_DIR)/list.c \
 $(SOURCE_DIR)/portable/MemMang/heap_1.c \
 $(PORT_DIR)/port.c \
+$(MQTT_DIR)/core_mqtt.c \
+$(MQTT_DIR)/core_mqtt_serializer.c \
+$(MQTT_DIR)/core_mqtt_state.c \
 
-#$(MQTT_DIR)/core_mqtt.c \
-#$(MQTT_DIR)/core_mqtt_serializer.c \
-#$(MQTT_DIR)/core_mqtt_state.c \
-
-CXXSRC = src/transport_esp8266.cpp
+CXXSRC =
 
 # If there is more than one source file, append them above, or modify and
 # uncomment the following:
@@ -84,12 +83,12 @@ CXXSRC = src/transport_esp8266.cpp
 # Even though the DOS/Win* filesystem matches both .s and .S the same,
 # it will preserve the spelling of the filenames, and gcc itself does
 # care about how the name is spelled on its command-line.
-ASRC = 
+ASRC =
 
 
 # List any extra directories to look for include files here.
 #     Each directory must be seperated by a space.
-EXTRAINCDIRS = 
+EXTRAINCDIRS =
 
 
 # Optional compiler flags.
@@ -100,8 +99,8 @@ EXTRAINCDIRS =
 #  -Wa,...:   tell GCC to pass this to the assembler.
 #    -ahlms:  create assembler listing
 
-DEBUG_LEVEL=
-WARNINGS=-Wall -Wextra -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wsign-compare \
+DEBUG_LEVEL =
+WARNINGS = -Wall -Wextra -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align -Wsign-compare \
 		-Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wunused
 
 CFLAGS = -I./include -I../Source/include -I$(PORT_DIR) -I$(MQTT_DIR)/include \
