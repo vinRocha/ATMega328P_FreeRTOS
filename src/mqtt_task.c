@@ -61,6 +61,10 @@
 #include "transport_esp8266.h"
 
 #include "drivers/digital_io.h"
+
+
+#define mLED                                     mERROR_LED
+
 /**
  * @brief The MQTT client identifier used in this example.  Each client identifier
  * must be unique so edit as required to ensure no two clients connecting to the
@@ -98,7 +102,7 @@
 /**
  * @brief Size of the network buffer for MQTT packets.
  */
-#define democonfigNETWORK_BUFFER_SIZE    ( 32U )
+#define democonfigNETWORK_BUFFER_SIZE    ( 64U )
 
 /*-----------------------------------------------------------*/
 
@@ -338,9 +342,6 @@ static void prvInitializeTopicBuffers( void );
 
 /*-----------------------------------------------------------*/
 
-/* Task LED to indicate task is running */
-static char mLED;
-
 /**
  * @brief Static buffer used to hold MQTT messages being sent and received.
  */
@@ -420,7 +421,7 @@ static MQTTPubAckInfo_t pIncomingPublishRecords[ mqttexampleINCOMING_PUBLISH_REC
  * @brief Create the task that demonstrates the MQTT API Demo over a
  * server-authenticated network connection with MQTT broker.
  */
-BaseType_t createMQTTtask(configSTACK_DEPTH_TYPE stackSize, UBaseType_t priority, char taskLED)
+BaseType_t createMQTTtask(configSTACK_DEPTH_TYPE stackSize, UBaseType_t priority)
 {
     /* This example uses a single application task, which in turn is used to
      * connect, subscribe, publish, unsubscribe, and disconnect from the MQTT
@@ -433,9 +434,8 @@ BaseType_t createMQTTtask(configSTACK_DEPTH_TYPE stackSize, UBaseType_t priority
      * state or call the MQTT_ProcessLoop() API function. Using an agent task
      * also enables multiple application tasks to more easily share a single
      * MQTT connection. */
-    mLED  = taskLED;
     if (xTaskCreate(prvMQTTDemoTask,      /* Function that implements the task. */
-                 "coreMQTT",              /* Text name for the task - only used for debugging. */
+                 "MQTT",              /* Text name for the task - only used for debugging. */
                  stackSize,               /* Size of stack (in words, not bytes) to allocate for the task. */
                  NULL,                    /* Task parameter - not used in this case. */
                  priority,                /* Task priority, must be between 0 and configMAX_PRIORITIES - 1. */

@@ -43,10 +43,10 @@
 #define configUSE_TICK_HOOK                 0
 #define configCPU_CLOCK_HZ                  ( ( unsigned long ) 16000000 )
 #define configTICK_RATE_HZ                  ( ( TickType_t ) 1000 )
-#define configMAX_PRIORITIES                ( 4 )
+#define configMAX_PRIORITIES                ( 2 )
 #define configMINIMAL_STACK_SIZE            ( ( unsigned short ) 85 )
-#define configTOTAL_HEAP_SIZE               ( (size_t ) ( 1500 ) )
-#define configMAX_TASK_NAME_LEN             ( 8 )
+#define configTOTAL_HEAP_SIZE               ( (size_t ) ( 800 ) )
+#define configMAX_TASK_NAME_LEN             ( 4 )
 #define configUSE_TRACE_FACILITY            0
 #define configUSE_16_BIT_TICKS              1
 #define configIDLE_SHOULD_YIELD             1
@@ -78,6 +78,7 @@ to exclude the API function. */
 #define mARDUINO_BUILTIN_LED            7 //PORTB bit 5;
 #define mLED_0                          0 //PORTD bit 2;
 #define mLED_1                          1 //PORTD bit 3;
-#define mERROR_LED                      2 //PORTD bit 4;
+#define mLED_2                          2 //PORTD bit 4;
+#define mERROR_LED                      mARDUINO_BUILTIN_LED
 
 #endif /* FREERTOS_CONFIG_H */

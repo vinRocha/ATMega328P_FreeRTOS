@@ -23,20 +23,15 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
-#include "com_task.h"
-#include "hcsr04_task.h"
+#include "mqtt_task.h"
 #include "transport_esp8266.h"
 #include "drivers/digital_io.h"
 
 /* Tasks' priority definitions */
-#define mHCSR04_PRIORITY           (tskIDLE_PRIORITY + 3)
-#define m8266RX_PRIORITY           (tskIDLE_PRIORITY + 2)
-#define mCOM_PRIORITY              (tskIDLE_PRIORITY + 1)
+#define mMQTT_PRIORITY              (tskIDLE_PRIORITY + 1)
 
 /* Tasks' StackSize definitions */
-#define mHCSR04_STACK_SIZE         configMINIMAL_STACK_SIZE
-#define m8266RX_STACK_SIZE         100
-#define mCOM_STACK_SIZE            123
+#define mMQTT_STACK_SIZE            500
 
 void vApplicationIdleHook(void);
 
@@ -46,29 +41,13 @@ short main(void) {
     digitalIOInitialise();
 
     /* Initialize esp8266AT transport interface */
-    if (esp8266Initialise(m8266RX_STACK_SIZE, m8266RX_PRIORITY) != pdPASS) {
-        digitalIOSet(mERROR_LED, pdTRUE);
-        for (;;) {}
-    }
-
-    /* Create Queue for Sensor/COM tasks */
-    QueueHandle_t mQueue = xQueueCreate(1, sizeof(hcsr04_t));
-    if(!mQueue) {
-        digitalIOSet(mERROR_LED, pdTRUE);
-        for (;;) {}
-    }
+    esp8266Initialise();
 
    /*  Create Sensor task */
-   if (xTaskCreate(hcsr04Task, "hcsr04T", mHCSR04_STACK_SIZE, (void*) mQueue, mHCSR04_PRIORITY, NULL) != pdPASS) {
+   if (createMQTTtask(mMQTT_STACK_SIZE, mMQTT_PRIORITY) != pdPASS) {
         digitalIOSet(mERROR_LED, pdTRUE);
         for (;;) {
         }
-    }
-
-    /* Create COM task */
-    if (xTaskCreate(comTask, "comT", mCOM_STACK_SIZE, (void*) mQueue, mCOM_PRIORITY, NULL) != pdPASS) {
-        digitalIOSet(mERROR_LED, pdTRUE);
-        for (;;) {}
     }
 
     /* Start Tasks*/

@@ -24,6 +24,6 @@
 #define MQTT_TASK_H
 #include "FreeRTOS.h"
 
-BaseType_t createMQTTtask(configSTACK_DEPTH_TYPE stackSize, UBaseType_t priority, char taskLED);
+BaseType_t createMQTTtask(configSTACK_DEPTH_TYPE stackSize, UBaseType_t priority);
 
 #endif /* MQTT_TASK_H */
