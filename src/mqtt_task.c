@@ -50,9 +50,8 @@
 
 /* Kernel includes. */
 #include "FreeRTOS.h"
+#include "core_mqtt_serializer.h"
 #include "task.h"
-
-#include "mqtt_task.h"
 
 /* MQTT library includes. */
 #include "core_mqtt.h"
@@ -60,10 +59,11 @@
 /* Transport interface implementation include header for esp8266AT connection. */
 #include "transport_esp8266.h"
 
+#include "mqtt_task.h"
 #include "drivers/digital_io.h"
 
-
-#define mLED                                     mERROR_LED
+#define mLED                                     mLED_0
+#define configDELAY_AFTER_SEND                   pdMS_TO_TICKS(200)
 
 /**
  * @brief The MQTT client identifier used in this example.  Each client identifier
@@ -102,16 +102,14 @@
 /**
  * @brief Size of the network buffer for MQTT packets.
  */
-#define democonfigNETWORK_BUFFER_SIZE    ( 64U )
+#define democonfigNETWORK_BUFFER_SIZE    ( 32U )
 
 /*-----------------------------------------------------------*/
-
-#define democonfigRETRY_MAX_ATTEMPTS  ( 5U )
 
 /**
  * @brief The maximum number of retries for network operation with server.
  */
-#define mqttexampleRETRY_MAX_ATTEMPTS                     ( 5U )
+#define mqttexampleRETRY_MAX_ATTEMPTS                     ( 3U )
 
 /**
  * @brief The maximum back-off delay (in milliseconds) for retrying failed operation
@@ -136,17 +134,17 @@
  * The topic name starts with the client identifier to ensure that each demo
  * interacts with a unique topic name.
  */
-#define mqttexampleTOPIC_PREFIX                           democonfigCLIENT_IDENTIFIER "/example/topic"
+#define mqttexampleTOPIC_PREFIX                           "/mqtt/test"
 
 /**
  * @brief The number of topic filters to subscribe.
  */
-#define mqttexampleTOPIC_COUNT                            ( 3 )
+#define mqttexampleTOPIC_COUNT                            ( 1 )
 
 /**
  * @brief The size of the buffer for each topic string.
  */
-#define mqttexampleTOPIC_BUFFER_SIZE                      ( 100U )
+#define mqttexampleTOPIC_BUFFER_SIZE                      ( 32U )
 
 /**
  * @brief The MQTT message published in this example.
@@ -157,13 +155,13 @@
  * @brief Time in ticks to wait between each cycle of the demo implemented
  * by prvMQTTDemoTask().
  */
-#define mqttexampleDELAY_BETWEEN_DEMO_ITERATIONS_TICKS    ( pdMS_TO_TICKS( 5000U ) )
+#define mqttexampleDELAY_BETWEEN_DEMO_ITERATIONS_TICKS    ( pdMS_TO_TICKS( 3000U ) )
 
 /**
  * @brief Timeout for MQTT_ProcessLoop in milliseconds.
  * Refer to FreeRTOS-Plus/Demo/coreMQTT_Windows_Simulator/readme.txt for more details.
  */
-#define mqttexamplePROCESS_LOOP_TIMEOUT_MS                ( 2000U )
+#define mqttexamplePROCESS_LOOP_TIMEOUT_MS                ( 5000U )
 
 /**
  * @brief The keep-alive timeout period reported to the broker while establishing
@@ -186,17 +184,12 @@
 #define mqttexampleDELAY_BETWEEN_PUBLISHES_TICKS          ( pdMS_TO_TICKS( 2000U ) )
 
 /**
- * @brief Transport timeout in milliseconds for transport send and receive.
- */
-#define mqttexampleTRANSPORT_SEND_RECV_TIMEOUT_MS         ( 200U )
-
-/**
  * @brief The length of the outgoing publish records array used by the coreMQTT
  * library to track QoS > 0 packet ACKS for outgoing publishes.
  * Number of publishes = ulMaxPublishCount * mqttexampleTOPIC_COUNT
  * Update in ulMaxPublishCount needs updating mqttexampleOUTGOING_PUBLISH_RECORD_LEN.
  */
-#define mqttexampleOUTGOING_PUBLISH_RECORD_LEN            ( 15U )
+#define mqttexampleOUTGOING_PUBLISH_RECORD_LEN            ( 10U )
 
 /**
  * @brief The length of the incoming publish records array used by the coreMQTT
@@ -204,7 +197,7 @@
  * Number of publishes = ulMaxPublishCount * mqttexampleTOPIC_COUNT
  * Update in ulMaxPublishCount needs updating mqttexampleINCOMING_PUBLISH_RECORD_LEN.
  */
-#define mqttexampleINCOMING_PUBLISH_RECORD_LEN            ( 15U )
+#define mqttexampleINCOMING_PUBLISH_RECORD_LEN            ( 10U )
 
 /**
  * @brief Milliseconds per second.
@@ -460,7 +453,7 @@ BaseType_t createMQTTtask(configSTACK_DEPTH_TYPE stackSize, UBaseType_t priority
 static void prvMQTTDemoTask( void * pvParameters )
 {
     uint32_t ulPublishCount = 0U, ulTopicCount = 0U;
-    const uint32_t ulMaxPublishCount = 5UL;
+    const uint32_t ulMaxPublishCount = 3UL;
     MQTTContext_t xMQTTContext = { 0 };
     MQTTStatus_t xMQTTStatus;
     esp8266TransportStatus_t xNetworkStatus;
@@ -645,8 +638,8 @@ static void prvUpdateSubAckStatus( MQTTPacketInfo_t * pxPacketInfo )
 static void prvMQTTSubscribeWithBackoffRetries( MQTTContext_t * pxMQTTContext )
 {
     MQTTStatus_t xResult = MQTTSuccess;
-    uint8_t counter = democonfigRETRY_MAX_ATTEMPTS;
-    uint16_t usNextRetryBackOff = 500U;
+    uint8_t counter = mqttexampleRETRY_MAX_ATTEMPTS;
+    uint16_t usNextRetryBackOff = mqttexampleRETRY_BACKOFF_BASE_MS;
     MQTTSubscribeInfo_t xMQTTSubscription[ mqttexampleTOPIC_COUNT ];
     bool xFailedSubscribeToTopic = false;
     uint32_t ulTopicCount = 0U;
@@ -660,7 +653,7 @@ static void prvMQTTSubscribeWithBackoffRetries( MQTTContext_t * pxMQTTContext )
     /* Populate subscription list. */
     for( ulTopicCount = 0; ulTopicCount < mqttexampleTOPIC_COUNT; ulTopicCount++ )
     {
-        xMQTTSubscription[ ulTopicCount ].qos = MQTTQoS2;
+        xMQTTSubscription[ ulTopicCount ].qos = MQTTQoS0;
         xMQTTSubscription[ ulTopicCount ].pTopicFilter = xTopicFilterContext[ ulTopicCount ].pcTopicFilter;
         xMQTTSubscription[ ulTopicCount ].topicFilterLength = ( uint16_t ) strlen( xTopicFilterContext[ ulTopicCount ].pcTopicFilter );
     }
@@ -678,6 +671,7 @@ static void prvMQTTSubscribeWithBackoffRetries( MQTTContext_t * pxMQTTContext )
                                   xMQTTSubscription,
                                   sizeof( xMQTTSubscription ) / sizeof( MQTTSubscribeInfo_t ),
                                   usSubscribePacketIdentifier );
+        vTaskDelay(configDELAY_AFTER_SEND);
         configASSERT( xResult == MQTTSuccess );
 
         for( ulTopicCount = 0; ulTopicCount < mqttexampleTOPIC_COUNT; ulTopicCount++ )
@@ -746,7 +740,7 @@ static void prvMQTTPublishToTopics( MQTTContext_t * pxMQTTContext )
         ( void ) memset( ( void * ) &xMQTTPublishInfo, 0x00, sizeof( xMQTTPublishInfo ) );
 
         /* This demo uses QoS2 */
-        xMQTTPublishInfo.qos = MQTTQoS2;
+        xMQTTPublishInfo.qos = MQTTQoS0;
         xMQTTPublishInfo.retain = false;
         xMQTTPublishInfo.pTopicName = xTopicFilterContext[ ulTopicCount ].pcTopicFilter;
         xMQTTPublishInfo.topicNameLength = ( uint16_t ) strlen( xTopicFilterContext[ ulTopicCount ].pcTopicFilter );
@@ -759,6 +753,7 @@ static void prvMQTTPublishToTopics( MQTTContext_t * pxMQTTContext )
         //LogInfo( ( "Publishing to the MQTT topic %s.\r\n", xTopicFilterContext[ ulTopicCount ].pcTopicFilter ) );
         /* Send PUBLISH packet. */
         xResult = MQTT_Publish( pxMQTTContext, &xMQTTPublishInfo, usPublishPacketIdentifier );
+        vTaskDelay(configDELAY_AFTER_SEND);
         configASSERT( xResult == MQTTSuccess );
     }
 }
@@ -776,7 +771,7 @@ static void prvMQTTUnsubscribeFromTopics( MQTTContext_t * pxMQTTContext )
     /* Populate subscription list. */
     for( ulTopicCount = 0; ulTopicCount < mqttexampleTOPIC_COUNT; ulTopicCount++ )
     {
-        xMQTTSubscription[ ulTopicCount ].qos = MQTTQoS2;
+        xMQTTSubscription[ ulTopicCount ].qos = MQTTQoS0;
         xMQTTSubscription[ ulTopicCount ].pTopicFilter = xTopicFilterContext[ ulTopicCount ].pcTopicFilter;
         xMQTTSubscription[ ulTopicCount ].topicFilterLength = ( uint16_t ) strlen( xTopicFilterContext[ ulTopicCount ].pcTopicFilter );
 
@@ -793,6 +788,7 @@ static void prvMQTTUnsubscribeFromTopics( MQTTContext_t * pxMQTTContext )
                                 xMQTTSubscription,
                                 sizeof( xMQTTSubscription ) / sizeof( MQTTSubscribeInfo_t ),
                                 usUnsubscribePacketIdentifier );
+    vTaskDelay(configDELAY_AFTER_SEND);
 
     configASSERT( xResult == MQTTSuccess );
 }
@@ -879,6 +875,7 @@ static void prvMQTTProcessResponse( MQTTPacketInfo_t * pxIncomingPacket,
 
 static void prvMQTTProcessIncomingPublish( MQTTPublishInfo_t * pxPublishInfo )
 {
+#if 0
     uint32_t ulTopicCount;
     BaseType_t xTopicFound = pdFALSE;
 
@@ -900,15 +897,15 @@ static void prvMQTTProcessIncomingPublish( MQTTPublishInfo_t * pxPublishInfo )
 
     if( xTopicFound == pdTRUE )
     {
-        //LogInfo( ( "\r\nIncoming Publish Topic Name: %.*s matches a subscribed topic.\r\n",
-        //           pxPublishInfo->topicNameLength,
-        //           pxPublishInfo->pTopicName ) );
+        LogInfo( ( "\r\nIncoming Publish Topic Name: %.*s matches a subscribed topic.\r\n",
+                   pxPublishInfo->topicNameLength,
+                   pxPublishInfo->pTopicName ) );
     }
     else
     {
-        //LogError( ( "Incoming Publish Topic Name: %.*s does not match a subscribed topic.\r\n",
-        //            pxPublishInfo->topicNameLength,
-        //            pxPublishInfo->pTopicName ) );
+        LogError( ( "Incoming Publish Topic Name: %.*s does not match a subscribed topic.\r\n",
+                    pxPublishInfo->topicNameLength,
+                    pxPublishInfo->pTopicName ) );
     }
 
     /* Verify the message received matches the message sent. */
@@ -918,6 +915,7 @@ static void prvMQTTProcessIncomingPublish( MQTTPublishInfo_t * pxPublishInfo )
         //            pxPublishInfo->topicNameLength,
         //            pxPublishInfo->pTopicName, mqttexampleMESSAGE ) );
     }
+#endif
 }
 
 /*-----------------------------------------------------------*/
@@ -976,16 +974,11 @@ static MQTTStatus_t prvProcessLoopWithTimeout( MQTTContext_t * pMqttContext,
 
     /* Call MQTT_ProcessLoop multiple times a timeout happens, or
      * MQTT_ProcessLoop fails. */
-    while( ( ulCurrentTime < ulMqttProcessLoopTimeoutTime ) &&
-           ( eMqttStatus == MQTTSuccess || eMqttStatus == MQTTNeedMoreBytes ) )
+    while( ( ulCurrentTime < ulMqttProcessLoopTimeoutTime && eMqttStatus == MQTTSuccess ) ||
+           ( eMqttStatus == MQTTNeedMoreBytes ) )
     {
         eMqttStatus = MQTT_ProcessLoop( pMqttContext );
         ulCurrentTime = pMqttContext->getTime();
-    }
-
-    if( eMqttStatus == MQTTNeedMoreBytes )
-    {
-        eMqttStatus = MQTTSuccess;
     }
 
     return eMqttStatus;

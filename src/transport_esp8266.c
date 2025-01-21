@@ -38,10 +38,10 @@
 #define TX_BLOCK                        0x00
 #define RX_BLOCK                        BLOCK_MS(10)
 
-#define mLED                            mLED_2
+#define mLED                            mLED_1
 
 #define BAUD_RATE                       115200
-#define BUFFER_LEN                      128
+#define BUFFER_LEN                      48
 #define AT_REPLY_LEN                    7
 
 enum transportStatus {
@@ -53,6 +53,7 @@ enum transportStatus {
 };
 
 static char esp8266_status = COM_UNINITIALIZED;
+static uint16_t data_length = 0; //in bytes.... that can count a lot of data....
 
 static void check_AT(void);
 static void start_TCP(const char *pHostName, const char *port);
@@ -134,8 +135,10 @@ int32_t esp8266AT_send(NetworkContext_t *pNetworkContext, const void *pBuffer, s
             bytes_sent++;
             bytesToSend--;
         }
-        //Should check for errors here... but for now, only clear control buffer.
-        while (rxByte(&c, BLOCK_MS(200), pdTRUE) > 0);
+        //Should check for errors here... but for now, only clear control data
+        //if no data is being received
+        if (!data_length)
+             while (rxByte(&c, BLOCK_MS(200), pdTRUE) > 0);
     }
 
     snprintf(&command[11], 5, "%u", bytesToSend);
@@ -152,7 +155,8 @@ int32_t esp8266AT_send(NetworkContext_t *pNetworkContext, const void *pBuffer, s
         bytes_sent++;
     }
     //Should check for errors here... but for now, only clear control buffer.
-    while (rxByte(&c, BLOCK_MS(200), pdTRUE) > 0);
+    if (!data_length)
+        while (rxByte(&c, BLOCK_MS(200), pdTRUE) > 0);
 
     return bytes_sent;
 }
@@ -268,7 +272,6 @@ void stop_TCP() {
 UBaseType_t rxByte(char *byte, TickType_t block, UBaseType_t control) {
 
     char c[6]; //convert up to 5 decimal digits to int16_t;
-    static uint16_t data_length = 0; //in bytes.... that can count a lot of data....
     unsigned char index;
 
     digitalIOToggle(mLED);
