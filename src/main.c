@@ -32,7 +32,7 @@
 #define mMQTT_PRIORITY              (tskIDLE_PRIORITY + 1)
 
 /* Tasks' StackSize definitions */
-#define mMQTT_STACK_SIZE            440
+#define mMQTT_STACK_SIZE            346
 
 void vApplicationIdleHook(void);
 

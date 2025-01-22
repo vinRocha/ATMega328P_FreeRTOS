@@ -32,16 +32,16 @@
 #include "drivers/serial.h"
 #include "drivers/digital_io.h"
 
-#define SLEEP                           vTaskDelay(pdMS_TO_TICKS(200))
+#define SLEEP                           vTaskDelay(pdMS_TO_TICKS(100))
 #define BLOCK_MS(x)                     pdMS_TO_TICKS(x)
 #define NO_BLOCK                        0x00
-#define TX_BLOCK                        0x00
+#define TX_BLOCK                        BLOCK_MS(10)
 #define RX_BLOCK                        BLOCK_MS(10)
 
 #define mLED                            mLED_1
 
 #define BAUD_RATE                       115200
-#define BUFFER_LEN                      48
+#define BUFFER_LEN                      64
 #define AT_REPLY_LEN                    7
 
 enum transportStatus {
@@ -136,9 +136,7 @@ int32_t esp8266AT_send(NetworkContext_t *pNetworkContext, const void *pBuffer, s
             bytesToSend--;
         }
         //Should check for errors here... but for now, only clear control data
-        //if no data is being received
-        if (!data_length)
-             while (rxByte(&c, BLOCK_MS(200), pdTRUE) > 0);
+        while (rxByte(&c, BLOCK_MS(100), pdTRUE) > 0);
     }
 
     snprintf(&command[11], 5, "%u", bytesToSend);
@@ -155,8 +153,7 @@ int32_t esp8266AT_send(NetworkContext_t *pNetworkContext, const void *pBuffer, s
         bytes_sent++;
     }
     //Should check for errors here... but for now, only clear control buffer.
-    if (!data_length)
-        while (rxByte(&c, BLOCK_MS(200), pdTRUE) > 0);
+    while (rxByte(&c, BLOCK_MS(100), pdTRUE) > 0);
 
     return bytes_sent;
 }
@@ -172,7 +169,7 @@ void check_AT(void) {
     xSerialPutChar(NULL, '0', TX_BLOCK); // Disable echo
     xSerialPutChar(NULL, '\r', TX_BLOCK);
     //Clear control buffer, if anything is there
-    while (rxByte(at_cmd_response, BLOCK_MS(200), pdTRUE) > 0);
+    while (rxByte(at_cmd_response, BLOCK_MS(100), pdTRUE) > 0);
 
     //Complete the command
     xSerialPutChar(NULL, '\n', TX_BLOCK);
@@ -235,7 +232,7 @@ void start_TCP(const char *pHostName, const char *port) {
     xSerialPutChar(NULL, '\r', TX_BLOCK);
     xSerialPutChar(NULL, '\n', TX_BLOCK);
 
-    rxByte(&c, BLOCK_MS(200), pdTRUE); //C, if success
+    rxByte(&c, BLOCK_MS(100), pdTRUE); //C, if success
 
     if (c != 'C') {
         esp8266_status = ERROR;
@@ -265,7 +262,7 @@ void stop_TCP() {
     xSerialPutChar(NULL, '\r', TX_BLOCK);
     xSerialPutChar(NULL, '\n', TX_BLOCK);
     //Clear rx control buffer
-    while (rxByte(&c, BLOCK_MS(200), pdTRUE) > 0);
+    while (rxByte(&c, BLOCK_MS(100), pdTRUE) > 0);
     esp8266_status = COM_INITIALIZED;
 }
 
@@ -276,17 +273,13 @@ UBaseType_t rxByte(char *byte, TickType_t block, UBaseType_t control) {
 
     digitalIOToggle(mLED);
 
-    if (control) {
-        return xSerialGetChar(NULL, (signed char*) byte, block);
-    }
-
-    if (data_length) {
+    if (data_length && !control) {
         data_length--;
         return xSerialGetChar(NULL, (signed char*) byte, block);
     }
 
     //Very ugly code, but it works...
-    xSerialGetChar(NULL, (signed char*) &c[0], block);
+    index = xSerialGetChar(NULL, (signed char*) &c[0], block);
     if (c[0] == '+') {
         while(!xSerialGetChar(NULL, (signed char*) &c[1], RX_BLOCK));
         if (c[1] == 'I') {
@@ -307,12 +300,21 @@ UBaseType_t rxByte(char *byte, TickType_t block, UBaseType_t control) {
                             c[index++] = c[5];
                         }
                         data_length = atoi(c);
-                        data_length--;
-                        return xSerialGetChar(NULL, (signed char*) byte, RX_BLOCK);
                     }
                 }
             }
         }
     }
+
+    if (control) {
+        if (data_length || !index) {
+            return pdFAIL;
+        }
+        else {
+            *byte = c[0];
+            return pdPASS;
+        }
+    }
+
     return pdFAIL;
 }

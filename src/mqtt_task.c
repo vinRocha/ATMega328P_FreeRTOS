@@ -63,7 +63,6 @@
 #include "drivers/digital_io.h"
 
 #define mLED                                     mLED_0
-#define configDELAY_AFTER_SEND                   pdMS_TO_TICKS(200)
 
 /**
  * @brief The MQTT client identifier used in this example.  Each client identifier
@@ -149,7 +148,7 @@
 /**
  * @brief The MQTT message published in this example.
  */
-#define mqttexampleMESSAGE                                "Hello World!"
+#define mqttexampleMESSAGE                                "Hello World from UNO R3"
 
 /**
  * @brief Time in ticks to wait between each cycle of the demo implemented
@@ -161,7 +160,7 @@
  * @brief Timeout for MQTT_ProcessLoop in milliseconds.
  * Refer to FreeRTOS-Plus/Demo/coreMQTT_Windows_Simulator/readme.txt for more details.
  */
-#define mqttexamplePROCESS_LOOP_TIMEOUT_MS                ( 5000U )
+#define mqttexamplePROCESS_LOOP_TIMEOUT_MS                ( 2000U )
 
 /**
  * @brief The keep-alive timeout period reported to the broker while establishing
@@ -653,7 +652,7 @@ static void prvMQTTSubscribeWithBackoffRetries( MQTTContext_t * pxMQTTContext )
     /* Populate subscription list. */
     for( ulTopicCount = 0; ulTopicCount < mqttexampleTOPIC_COUNT; ulTopicCount++ )
     {
-        xMQTTSubscription[ ulTopicCount ].qos = MQTTQoS0;
+        xMQTTSubscription[ ulTopicCount ].qos = MQTTQoS2;
         xMQTTSubscription[ ulTopicCount ].pTopicFilter = xTopicFilterContext[ ulTopicCount ].pcTopicFilter;
         xMQTTSubscription[ ulTopicCount ].topicFilterLength = ( uint16_t ) strlen( xTopicFilterContext[ ulTopicCount ].pcTopicFilter );
     }
@@ -671,7 +670,6 @@ static void prvMQTTSubscribeWithBackoffRetries( MQTTContext_t * pxMQTTContext )
                                   xMQTTSubscription,
                                   sizeof( xMQTTSubscription ) / sizeof( MQTTSubscribeInfo_t ),
                                   usSubscribePacketIdentifier );
-        vTaskDelay(configDELAY_AFTER_SEND);
         configASSERT( xResult == MQTTSuccess );
 
         for( ulTopicCount = 0; ulTopicCount < mqttexampleTOPIC_COUNT; ulTopicCount++ )
@@ -728,11 +726,14 @@ static void prvMQTTPublishToTopics( MQTTContext_t * pxMQTTContext )
     MQTTStatus_t xResult;
     MQTTPublishInfo_t xMQTTPublishInfo;
     uint32_t ulTopicCount;
+//    char msg[5];
 
     /***
      * For readability, error handling in this function is restricted to the use of
      * asserts().
      ***/
+
+//    snprintf(msg, 5, "%u", uxTaskGetStackHighWaterMark(NULL));
 
     for( ulTopicCount = 0; ulTopicCount < mqttexampleTOPIC_COUNT; ulTopicCount++ )
     {
@@ -740,7 +741,7 @@ static void prvMQTTPublishToTopics( MQTTContext_t * pxMQTTContext )
         ( void ) memset( ( void * ) &xMQTTPublishInfo, 0x00, sizeof( xMQTTPublishInfo ) );
 
         /* This demo uses QoS2 */
-        xMQTTPublishInfo.qos = MQTTQoS0;
+        xMQTTPublishInfo.qos = MQTTQoS2;
         xMQTTPublishInfo.retain = false;
         xMQTTPublishInfo.pTopicName = xTopicFilterContext[ ulTopicCount ].pcTopicFilter;
         xMQTTPublishInfo.topicNameLength = ( uint16_t ) strlen( xTopicFilterContext[ ulTopicCount ].pcTopicFilter );
@@ -753,7 +754,6 @@ static void prvMQTTPublishToTopics( MQTTContext_t * pxMQTTContext )
         //LogInfo( ( "Publishing to the MQTT topic %s.\r\n", xTopicFilterContext[ ulTopicCount ].pcTopicFilter ) );
         /* Send PUBLISH packet. */
         xResult = MQTT_Publish( pxMQTTContext, &xMQTTPublishInfo, usPublishPacketIdentifier );
-        vTaskDelay(configDELAY_AFTER_SEND);
         configASSERT( xResult == MQTTSuccess );
     }
 }
@@ -771,7 +771,7 @@ static void prvMQTTUnsubscribeFromTopics( MQTTContext_t * pxMQTTContext )
     /* Populate subscription list. */
     for( ulTopicCount = 0; ulTopicCount < mqttexampleTOPIC_COUNT; ulTopicCount++ )
     {
-        xMQTTSubscription[ ulTopicCount ].qos = MQTTQoS0;
+        xMQTTSubscription[ ulTopicCount ].qos = MQTTQoS2;
         xMQTTSubscription[ ulTopicCount ].pTopicFilter = xTopicFilterContext[ ulTopicCount ].pcTopicFilter;
         xMQTTSubscription[ ulTopicCount ].topicFilterLength = ( uint16_t ) strlen( xTopicFilterContext[ ulTopicCount ].pcTopicFilter );
 
@@ -788,7 +788,6 @@ static void prvMQTTUnsubscribeFromTopics( MQTTContext_t * pxMQTTContext )
                                 xMQTTSubscription,
                                 sizeof( xMQTTSubscription ) / sizeof( MQTTSubscribeInfo_t ),
                                 usUnsubscribePacketIdentifier );
-    vTaskDelay(configDELAY_AFTER_SEND);
 
     configASSERT( xResult == MQTTSuccess );
 }
