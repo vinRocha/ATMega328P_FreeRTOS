@@ -21,7 +21,6 @@
  *
  */
 #include "FreeRTOS.h"
-#include "FreeRTOSConfig.h"
 #include "task.h"
 #include "queue.h"
 #include "mqtt_task.h"
@@ -32,7 +31,7 @@
 #define mMQTT_PRIORITY              (tskIDLE_PRIORITY + 1)
 
 /* Tasks' StackSize definitions */
-#define mMQTT_STACK_SIZE            346
+#define mMQTT_STACK_SIZE            350
 
 void vApplicationIdleHook(void);
 

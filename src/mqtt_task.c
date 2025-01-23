@@ -64,6 +64,14 @@
 
 #define mLED                                     mLED_0
 
+#define configASSERT(x) \
+if (!(x)) { \
+  for (;;) { \
+    digitalIOToggle(mERROR_LED); \
+    vTaskDelay(pdMS_TO_TICKS(300)); \
+    } \
+}
+
 /**
  * @brief The MQTT client identifier used in this example.  Each client identifier
  * must be unique so edit as required to ensure no two clients connecting to the
@@ -76,7 +84,7 @@
  *
  * #define democonfigCLIENT_IDENTIFIER				"insert here."
  */
-#define democonfigCLIENT_IDENTIFIER              "ARDUINO"
+#define democonfigCLIENT_IDENTIFIER              "UNO_R3"
 
 
 /**
@@ -133,7 +141,7 @@
  * The topic name starts with the client identifier to ensure that each demo
  * interacts with a unique topic name.
  */
-#define mqttexampleTOPIC_PREFIX                           "/mqtt/test"
+#define mqttexampleTOPIC_PREFIX                           "/home/garage"
 
 /**
  * @brief The number of topic filters to subscribe.
@@ -477,12 +485,7 @@ static void prvMQTTDemoTask( void * pvParameters )
 
         /****************************** Connect. ******************************/
         xNetworkStatus = esp8266AT_Connect(democonfigMQTT_BROKER_ENDPOINT, democonfigMQTT_BROKER_PORT);
-        if (xNetworkStatus != ESP8266_TRANSPORT_SUCCESS) {
-            for(;;){
-                digitalIOToggle(mERROR_LED);
-                vTaskDelay(pdMS_TO_TICKS(300));
-            }
-        }
+        configASSERT(xNetworkStatus == ESP8266_TRANSPORT_SUCCESS);
 
         /* Send an MQTT CONNECT packet over the established TLS connection,
          * and wait for the connection acknowledgment (CONNACK) packet. */
@@ -726,14 +729,14 @@ static void prvMQTTPublishToTopics( MQTTContext_t * pxMQTTContext )
     MQTTStatus_t xResult;
     MQTTPublishInfo_t xMQTTPublishInfo;
     uint32_t ulTopicCount;
-//    char msg[5];
+    char msg[5];
 
     /***
      * For readability, error handling in this function is restricted to the use of
      * asserts().
      ***/
 
-//    snprintf(msg, 5, "%u", uxTaskGetStackHighWaterMark(NULL));
+    snprintf(msg, 5, "%u", xPortGetFreeHeapSize());
 
     for( ulTopicCount = 0; ulTopicCount < mqttexampleTOPIC_COUNT; ulTopicCount++ )
     {
@@ -745,8 +748,8 @@ static void prvMQTTPublishToTopics( MQTTContext_t * pxMQTTContext )
         xMQTTPublishInfo.retain = false;
         xMQTTPublishInfo.pTopicName = xTopicFilterContext[ ulTopicCount ].pcTopicFilter;
         xMQTTPublishInfo.topicNameLength = ( uint16_t ) strlen( xTopicFilterContext[ ulTopicCount ].pcTopicFilter );
-        xMQTTPublishInfo.pPayload = mqttexampleMESSAGE;
-        xMQTTPublishInfo.payloadLength = strlen( mqttexampleMESSAGE );
+        xMQTTPublishInfo.pPayload = msg;
+        xMQTTPublishInfo.payloadLength = strlen( msg );
 
         /* Get a unique packet id. */
         usPublishPacketIdentifier = MQTT_GetPacketId( pxMQTTContext );
