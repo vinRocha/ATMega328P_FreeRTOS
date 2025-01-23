@@ -28,7 +28,7 @@
 #include "drivers/digital_io.h"
 
 /* Tasks' priority definitions */
-#define mMQTT_PRIORITY              (tskIDLE_PRIORITY + 2)
+#define mMQTT_PRIORITY              (tskIDLE_PRIORITY + 0)
 #define m8266RX_PRIORITY            (tskIDLE_PRIORITY + 1)
 
 /* Tasks' StackSize definitions */
@@ -48,8 +48,8 @@ short main(void) {
         for (;;) {}
     }
 
-   /*  Create Sensor task */
-   if (createMQTTtask(mMQTT_STACK_SIZE, mMQTT_PRIORITY) != pdPASS) {
+    /*  Create MQTT task */
+    if (xTaskCreate(MQTTtask, "MQTT", mMQTT_STACK_SIZE, NULL, mMQTT_PRIORITY, NULL) != pdPASS) {
         digitalIOSet(mERROR_LED, pdTRUE);
         for (;;) {}
     }
