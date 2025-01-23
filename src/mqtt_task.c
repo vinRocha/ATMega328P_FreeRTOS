@@ -460,7 +460,7 @@ BaseType_t createMQTTtask(configSTACK_DEPTH_TYPE stackSize, UBaseType_t priority
 static void prvMQTTDemoTask( void * pvParameters )
 {
     uint32_t ulPublishCount = 0U, ulTopicCount = 0U;
-    const uint32_t ulMaxPublishCount = 3UL;
+    const uint32_t ulMaxPublishCount = 1UL;
     MQTTContext_t xMQTTContext = { 0 };
     MQTTStatus_t xMQTTStatus;
     esp8266TransportStatus_t xNetworkStatus;

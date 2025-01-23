@@ -28,10 +28,12 @@
 #include "drivers/digital_io.h"
 
 /* Tasks' priority definitions */
-#define mMQTT_PRIORITY              (tskIDLE_PRIORITY + 1)
+#define mMQTT_PRIORITY              (tskIDLE_PRIORITY + 2)
+#define m8266RX_PRIORITY            (tskIDLE_PRIORITY + 1)
 
 /* Tasks' StackSize definitions */
 #define mMQTT_STACK_SIZE            350
+#define m8266RX_STACK_SIZE          100
 
 void vApplicationIdleHook(void);
 
@@ -41,13 +43,15 @@ short main(void) {
     digitalIOInitialise();
 
     /* Initialize esp8266AT transport interface */
-    esp8266Initialise();
+    if (esp8266Initialise(m8266RX_STACK_SIZE, m8266RX_PRIORITY) != pdPASS) {
+        digitalIOSet(mERROR_LED, pdTRUE);
+        for (;;) {}
+    }
 
    /*  Create Sensor task */
    if (createMQTTtask(mMQTT_STACK_SIZE, mMQTT_PRIORITY) != pdPASS) {
         digitalIOSet(mERROR_LED, pdTRUE);
-        for (;;) {
-        }
+        for (;;) {}
     }
 
     /* Start Tasks*/

@@ -52,7 +52,6 @@ MQTT_DIR = ../../FreeRTOS-Plus/Source/Application-Protocols/coreMQTT/source
 CSRC	= \
 src/main.c \
 src/mqtt_task.c \
-src/transport_esp8266.c \
 src/drivers/digital_io.c \
 src/drivers/serial.c \
 $(SOURCE_DIR)/tasks.c \
@@ -64,7 +63,7 @@ $(MQTT_DIR)/core_mqtt.c \
 $(MQTT_DIR)/core_mqtt_serializer.c \
 $(MQTT_DIR)/core_mqtt_state.c \
 
-CXXSRC =
+CXXSRC = src/transport_esp8266.cpp
 
 # If there is more than one source file, append them above, or modify and
 # uncomment the following:
