@@ -28,7 +28,14 @@
 extern "C" {
 #endif
 
+#include "task.h"
+
 typedef unsigned int hcsr04_t;
+
+typedef struct hcsr04_data {
+    hcsr04_t data;
+    TaskHandle_t task;
+} hcsr04_data_t;
 
 #ifdef __cplusplus
 }

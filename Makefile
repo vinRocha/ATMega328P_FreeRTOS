@@ -52,6 +52,7 @@ MQTT_DIR = ../../FreeRTOS-Plus/Source/Application-Protocols/coreMQTT/source
 CSRC	= \
 src/main.c \
 src/mqtt_task.c \
+src/hcsr04_task.c \
 src/drivers/digital_io.c \
 src/drivers/serial.c \
 $(SOURCE_DIR)/tasks.c \

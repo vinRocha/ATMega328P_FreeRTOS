@@ -28,6 +28,7 @@
 #include <string.h>
 #include "transport_esp8266.h"
 #include "FreeRTOS.h"
+//#include "hcsr04.h"
 #include "task.h"
 #include "queue.h"
 #include "drivers/serial.h"
@@ -36,8 +37,8 @@
 #define SLEEP                           vTaskDelay(pdMS_TO_TICKS(100))
 #define BLOCK_MS(x)                     pdMS_TO_TICKS(x)
 #define NO_BLOCK                        0x00
-#define TX_BLOCK                        BLOCK_MS(10)
-#define RX_BLOCK                        BLOCK_MS(10)
+#define TX_BLOCK                        portMAX_DELAY
+#define RX_BLOCK                        portMAX_DELAY
 
 #define mLED                            mLED_1
 
@@ -70,7 +71,7 @@ static void start_TCP(const char *pHostName, const char *port);
 static void stop_TCP();
 static void send_to_controlQ(int n, const char *c);
 
-BaseType_t esp8266Initialise(configSTACK_DEPTH_TYPE stackSize, UBaseType_t priority) {
+BaseType_t esp8266Initialise(configSTACK_DEPTH_TYPE stackSize, void *pvParameters, UBaseType_t priority) {
 
     xSerialPortInitMinimal(BAUD_RATE, BUFFER_LEN);
     controlQ = xQueueCreate(BUFFER_LEN/3, (UBaseType_t) sizeof(char));
@@ -79,7 +80,7 @@ BaseType_t esp8266Initialise(configSTACK_DEPTH_TYPE stackSize, UBaseType_t prior
     dataQ = xQueueCreate(BUFFER_LEN, (UBaseType_t) sizeof(char));
     if (!dataQ)
         return pdFAIL;
-    if (xTaskCreate(rxThread, "8266", stackSize, NULL, priority, NULL) != pdPASS)
+    if (xTaskCreate(rxThread, "8266", stackSize, pvParameters, priority, NULL) != pdPASS)
         return pdFAIL;
     esp8266_status = RX_THREAD_INITIALIZED;
     return pdPASS;
@@ -121,7 +122,7 @@ int32_t esp8266AT_recv(NetworkContext_t *pNetworkContext, void *pBuffer, size_t 
     char byte;
 
     while(bytes_read < (int32_t) bytesToRecv) {
-        if (xQueueReceive(dataQ, &byte, RX_BLOCK)) {
+        if (xQueueReceive(dataQ, &byte, BLOCK_MS(10))) {
             *((char*) pBuffer + bytes_read) = byte;
             bytes_read++;
         }
@@ -296,7 +297,7 @@ void rxThread(void *args) {
     //Keep running forever!!! Tasks cannot return!!!
     for(;;) {
         digitalIOToggle(mLED);
-        if (xSerialGetChar(NULL, (signed char*) &c[0], pdMS_TO_TICKS(5000))) {
+        if (xSerialGetChar(NULL, (signed char*) &c[0], RX_BLOCK)) {
             if (c[0] == '+') {
                 while(!xSerialGetChar(NULL, (signed char*) &c[1], RX_BLOCK));
                 if (c[1] == 'I') {
@@ -319,8 +320,10 @@ void rxThread(void *args) {
                                 data_lenght = atoi(c);
                                 for (; data_lenght > 0; data_lenght--) {
                                     while(!xSerialGetChar(NULL, (signed char*) c, RX_BLOCK));
-                                    xQueueSend(dataQ, c, BLOCK_MS(5000));
+                                    xQueueSend(dataQ, c, TX_BLOCK);
                                 }
+//                               ((hcsr04_data_t*) args)->data = uxTaskGetStackHighWaterMark2(NULL);
+//                                xTaskNotifyGive(((hcsr04_data_t*) args)->task);
                             }
                             else {
                                 send_to_controlQ(5, c);
@@ -339,7 +342,7 @@ void rxThread(void *args) {
                 }
             }
             else {
-                xQueueSend(controlQ, c, BLOCK_MS(5000));
+                xQueueSend(controlQ, c, TX_BLOCK);
             }
         }
     }
@@ -347,7 +350,7 @@ void rxThread(void *args) {
 
 void send_to_controlQ(int n, const char *c) {
     for(int i = 0; i < n; i++) {
-        xQueueSend(controlQ, c + i, BLOCK_MS(5000));
+        xQueueSend(controlQ, c + i, TX_BLOCK);
     }
     return;
 }

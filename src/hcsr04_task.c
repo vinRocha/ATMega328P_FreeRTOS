@@ -24,11 +24,10 @@
 #include <avr/io.h>
 #include "FreeRTOS.h"
 #include "task.h"
-#include "queue.h"
 #include "hcsr04_task.h"
 #include "drivers/digital_io.h"
 
-#define mLED                            mLED_0 //Debugging LED, PORTD bit 2;
+#define mLED                            mLED_2 //Debugging LED, PORTD bit 4;
 #define TRIG_PIN                        6      //PORTB bit 4;
 #define ECHO_PIN                        0x01   //PORTB bit 0;
 
@@ -52,10 +51,11 @@ void hcsr04Task(void *pvParameters) {
         while((PINB & ECHO_PIN) && (interval < 0xffff)) {
             interval++;
         }
-        //Correction factor for while conditional. Consumes 19 CPU clock every interation.
+        //Correction factor for while conditional. Consumes 8 CPU clock every interation.
         //16 CPU clocks eqs 1us
-        interval += (interval / 16) * 3 + 1;
-        xQueueSend((QueueHandle_t) pvParameters, &interval, pdMS_TO_TICKS(500));
+        interval = (interval / 2);
+        ((hcsr04_data_t*) pvParameters)->data = interval;
+        xTaskNotifyGive(((hcsr04_data_t*) pvParameters)->task);
         vTaskDelay(pdMS_TO_TICKS(3000));
     }
 }

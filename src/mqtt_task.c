@@ -52,7 +52,6 @@
 #include "FreeRTOS.h"
 #include "core_mqtt_serializer.h"
 #include "task.h"
-#include "queue.h"
 
 /* MQTT library includes. */
 #include "core_mqtt.h"
@@ -143,7 +142,8 @@ if (!(x)) { \
  * The topic name starts with the client identifier to ensure that each demo
  * interacts with a unique topic name.
  */
-#define mqttexampleTOPIC_PREFIX                           "/home/garage"
+#define mqttexampleRX_TOPIC_PREFIX                           "/home/garage/control"
+#define mqttexampleTX_TOPIC_PREFIX                           "/home/garage/state"
 
 /**
  * @brief The number of topic filters to subscribe.
@@ -268,7 +268,7 @@ static void prvMQTTSubscribeWithBackoffRetries( MQTTContext_t * pxMQTTContext );
  *
  * @param[in] pxMQTTContext MQTT context pointer.
  */
-static void prvMQTTPublishToTopics( MQTTContext_t * pxMQTTContext );
+static void prvMQTTPublishToTopics( MQTTContext_t *pxMQTTContext, hcsr04_t data );
 
 /**
  * @brief Unsubscribes from the previously subscribed topic as specified
@@ -347,7 +347,7 @@ static uint8_t ucSharedBuffer[ democonfigNETWORK_BUFFER_SIZE ];
  * between the current time and the global entry time. This will reduce the chances
  * of overflow for the 32 bit unsigned integer used for holding the timestamp.
  */
-static uint32_t ulGlobalEntryTimeMs;
+static uint32_t ulGlobalEntryTimeMs = 0;
 
 /**
  * @brief Packet Identifier generated when Publish request was sent to the broker;
@@ -409,8 +409,6 @@ static MQTTPubAckInfo_t pOutgoingPublishRecords[ mqttexampleOUTGOING_PUBLISH_REC
  */
 static MQTTPubAckInfo_t pIncomingPublishRecords[ mqttexampleINCOMING_PUBLISH_RECORD_LEN ];
 
-static hcsr04_t data;
-
 /*-----------------------------------------------------------*/
 
 /*
@@ -457,12 +455,12 @@ void MQTTtask( void * pvParameters )
     {
         digitalIOToggle(mLED);
 
-        if (xQueueReceive((QueueHandle_t) pvParameters, &data, pdMS_TO_TICKS(10000))) {
+        if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(10000))) {
 
             /**************************** Publish and Keep-Alive Loop. ******************************/
 
             /* Publish messages with QoS2, and send and process keep-alive messages. */
-            prvMQTTPublishToTopics( &xMQTTContext );
+            prvMQTTPublishToTopics( &xMQTTContext, ((hcsr04_data_t*) pvParameters)->data );
 
             /* Process incoming publish echo. Since the application subscribed and published
              * to the same topic, the broker will send the incoming publish message back
@@ -636,19 +634,19 @@ static void prvMQTTSubscribeWithBackoffRetries( MQTTContext_t * pxMQTTContext )
 }
 /*-----------------------------------------------------------*/
 
-static void prvMQTTPublishToTopics( MQTTContext_t * pxMQTTContext )
+static void prvMQTTPublishToTopics( MQTTContext_t *pxMQTTContext, hcsr04_t data )
 {
     MQTTStatus_t xResult;
     MQTTPublishInfo_t xMQTTPublishInfo;
     uint32_t ulTopicCount;
-    char msg[5];
+    //char msg[5];
 
     /***
      * For readability, error handling in this function is restricted to the use of
      * asserts().
      ***/
 
-    snprintf(msg, 5, "%u", data);
+    //snprintf(msg, 5, "%u", data);
 
     for( ulTopicCount = 0; ulTopicCount < mqttexampleTOPIC_COUNT; ulTopicCount++ )
     {
@@ -658,10 +656,10 @@ static void prvMQTTPublishToTopics( MQTTContext_t * pxMQTTContext )
         /* This demo uses QoS2 */
         xMQTTPublishInfo.qos = MQTTQoS2;
         xMQTTPublishInfo.retain = false;
-        xMQTTPublishInfo.pTopicName = xTopicFilterContext[ ulTopicCount ].pcTopicFilter;
-        xMQTTPublishInfo.topicNameLength = ( uint16_t ) strlen( xTopicFilterContext[ ulTopicCount ].pcTopicFilter );
-        xMQTTPublishInfo.pPayload = msg;
-        xMQTTPublishInfo.payloadLength = strlen( msg );
+        xMQTTPublishInfo.pTopicName = mqttexampleTX_TOPIC_PREFIX;
+        xMQTTPublishInfo.topicNameLength = ( uint16_t ) strlen( xMQTTPublishInfo.pTopicName );
+        xMQTTPublishInfo.pPayload = &data;
+        xMQTTPublishInfo.payloadLength = sizeof(data);
 
         /* Get a unique packet id. */
         usPublishPacketIdentifier = MQTT_GetPacketId( pxMQTTContext );
@@ -859,15 +857,20 @@ static MQTTStatus_t prvProcessLoopWithTimeout( MQTTContext_t * pMqttContext,
     MQTTStatus_t eMqttStatus = MQTTSuccess;
 
     ulCurrentTime = pMqttContext->getTime();
-    ulMqttProcessLoopTimeoutTime = ulCurrentTime + ulTimeoutMs;
+    if (ulCurrentTime + ulTimeoutMs < ulCurrentTime) //overflow
+        ulMqttProcessLoopTimeoutTime = ulTimeoutMs;
+    else
+        ulMqttProcessLoopTimeoutTime = ulCurrentTime + ulTimeoutMs;
 
     /* Call MQTT_ProcessLoop multiple times a timeout happens, or
      * MQTT_ProcessLoop fails. */
-    while( ( ulCurrentTime < ulMqttProcessLoopTimeoutTime && eMqttStatus == MQTTSuccess ) ||
-           ( eMqttStatus == MQTTNeedMoreBytes ) )
+    while( ( ulCurrentTime < ulMqttProcessLoopTimeoutTime ) )
     {
         eMqttStatus = MQTT_ProcessLoop( pMqttContext );
-        ulCurrentTime = pMqttContext->getTime();
+        ulTimeoutMs = pMqttContext->getTime();
+        if (ulCurrentTime >= ulTimeoutMs) //overflow
+            break;
+        ulCurrentTime = ulTimeoutMs;
     }
 
     return eMqttStatus;
@@ -886,7 +889,7 @@ static void prvInitializeTopicBuffers( void )
         /* Write topic strings into buffers. */
         xCharactersWritten = snprintf( xTopicFilterContext[ ulTopicCount ].pcTopicFilter,
                                        mqttexampleTOPIC_BUFFER_SIZE,
-                                       "%s%d", mqttexampleTOPIC_PREFIX, ( int ) ulTopicCount );
+                                       "%s", mqttexampleRX_TOPIC_PREFIX);
 
         configASSERT( xCharactersWritten >= 0 && xCharactersWritten < mqttexampleTOPIC_BUFFER_SIZE );
 
