@@ -24,6 +24,7 @@
 #include <avr/io.h>
 #include "FreeRTOS.h"
 #include "task.h"
+#include "app_data_types.h"
 #include "hcsr04_task.h"
 #include "drivers/digital_io.h"
 
@@ -35,13 +36,13 @@ static void delayMicrosecond(char x);
 
 void hcsr04Task(void *pvParameters) {
 
-    hcsr04_t interval;
+    hcsr04_data_t interval;
     unsigned int timeout;
 
     for (;;) {
         interval = 0;
         timeout = 0;
-        digitalIOToggle(mLED);
+//        digitalIOToggle(mLED);
         digitalIOSet(TRIG_PIN, pdTRUE);
         delayMicrosecond(8);
         digitalIOSet(TRIG_PIN, pdFALSE);
@@ -53,9 +54,9 @@ void hcsr04Task(void *pvParameters) {
         }
         //Correction factor for while conditional. Consumes 8 CPU clock every interation.
         //16 CPU clocks eqs 1us
-        interval = (interval / 2);
-        ((hcsr04_data_t*) pvParameters)->data = interval;
-        xTaskNotifyGive(((hcsr04_data_t*) pvParameters)->task);
+        interval = interval / 2;
+        ((app_data_handle_t*) pvParameters)->sensor_read = interval;
+        xTaskNotifyGive(((app_data_handle_t*) pvParameters)->mqtt_task);
         vTaskDelay(pdMS_TO_TICKS(3000));
     }
 }
@@ -66,5 +67,4 @@ void delayMicrosecond(char x) {
     a = x - 1;
     if (a > 0)
         delayMicrosecond(a);
-    return;
 }

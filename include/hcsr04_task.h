@@ -28,8 +28,6 @@
 extern "C" {
 #endif
 
-#include "hcsr04.h"
-
 void hcsr04Task(void *pvParameters);
 
 #ifdef __cplusplus

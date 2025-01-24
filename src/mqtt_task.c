@@ -50,7 +50,6 @@
 
 /* Kernel includes. */
 #include "FreeRTOS.h"
-#include "core_mqtt_serializer.h"
 #include "task.h"
 
 /* MQTT library includes. */
@@ -59,8 +58,8 @@
 /* Transport interface implementation include header for esp8266AT connection. */
 #include "transport_esp8266.h"
 
+#include "app_data_types.h"
 #include "mqtt_task.h"
-#include "hcsr04.h"
 #include "drivers/digital_io.h"
 
 #define mLED                                     mLED_0
@@ -268,7 +267,7 @@ static void prvMQTTSubscribeWithBackoffRetries( MQTTContext_t * pxMQTTContext );
  *
  * @param[in] pxMQTTContext MQTT context pointer.
  */
-static void prvMQTTPublishToTopics( MQTTContext_t *pxMQTTContext, hcsr04_t data );
+static void prvMQTTPublishToTopics( MQTTContext_t *pxMQTTContext, hcsr04_data_t data );
 
 /**
  * @brief Unsubscribes from the previously subscribed topic as specified
@@ -453,14 +452,14 @@ void MQTTtask( void * pvParameters )
 
     for( ; ; )
     {
-        digitalIOToggle(mLED);
+//        digitalIOToggle(mLED);
 
         if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(10000))) {
 
             /**************************** Publish and Keep-Alive Loop. ******************************/
 
             /* Publish messages with QoS2, and send and process keep-alive messages. */
-            prvMQTTPublishToTopics( &xMQTTContext, ((hcsr04_data_t*) pvParameters)->data );
+            prvMQTTPublishToTopics( &xMQTTContext, ((app_data_handle_t*) pvParameters)->sensor_read );
 
             /* Process incoming publish echo. Since the application subscribed and published
              * to the same topic, the broker will send the incoming publish message back
@@ -634,7 +633,7 @@ static void prvMQTTSubscribeWithBackoffRetries( MQTTContext_t * pxMQTTContext )
 }
 /*-----------------------------------------------------------*/
 
-static void prvMQTTPublishToTopics( MQTTContext_t *pxMQTTContext, hcsr04_t data )
+static void prvMQTTPublishToTopics( MQTTContext_t *pxMQTTContext, hcsr04_data_t data )
 {
     MQTTStatus_t xResult;
     MQTTPublishInfo_t xMQTTPublishInfo;

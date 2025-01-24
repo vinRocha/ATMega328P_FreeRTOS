@@ -21,21 +21,22 @@
  *
  */
 
-#ifndef HCSR04_H
-#define HCSR04_H
+#ifndef APP_DATA_TYPES_H
+#define APP_DATA_TYPES_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#include "FreeRTOS.h"
 #include "task.h"
 
-typedef unsigned int hcsr04_t;
+typedef unsigned int hcsr04_data_t;
 
-typedef struct hcsr04_data {
-    hcsr04_t data;
-    TaskHandle_t task;
-} hcsr04_data_t;
+typedef struct app_data_handle  {
+    hcsr04_data_t sensor_read; //data measured by hcsr04_task
+    TaskHandle_t mqtt_task; //mqtt task handle to signal data is ready
+} app_data_handle_t;
 
 #ifdef __cplusplus
 }
