@@ -1,4 +1,4 @@
-This application is based on FreeRTOS [MQTT Plain Text demo](https://freertos.org/Documentation/03-Libraries/03-FreeRTOS-core/02-coreMQTT/02-Demos/01-coreMQTT-demo). It utilizes FreeRTOS coreMQTT library to connect to a MQTT broker and send/receive data. It then performs some actions based on the data received.
+This application is a hack on FreeRTOS [MQTT Plain Text demo](https://freertos.org/Documentation/03-Libraries/03-FreeRTOS-core/02-coreMQTT/02-Demos/01-coreMQTT-demo). It utilizes FreeRTOS coreMQTT library to connect to a MQTT broker and send/receive data. It then performs some actions based on the data received.
 
 This application is target to Arduino UNO R3 HW and requires an WiFi module that supports AT commands (such as ESP01) for networking.
 
