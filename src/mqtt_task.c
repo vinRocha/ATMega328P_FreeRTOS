@@ -62,7 +62,7 @@
 #include "mqtt_task.h"
 #include "drivers/digital_io.h"
 
-#define mLED                                     mLED_0
+#define mLED                                     mLED_MQTT
 
 #define configASSERT(x) \
 if (!(x)) { \
@@ -267,7 +267,7 @@ static void prvMQTTSubscribeWithBackoffRetries( MQTTContext_t * pxMQTTContext );
  *
  * @param[in] pxMQTTContext MQTT context pointer.
  */
-static void prvMQTTPublishToTopics( MQTTContext_t *pxMQTTContext, hcsr04_data_t data );
+static void prvMQTTPublishToTopics( MQTTContext_t *pxMQTTContext );
 
 /**
  * @brief Unsubscribes from the previously subscribed topic as specified
@@ -302,7 +302,7 @@ static void prvMQTTProcessResponse( MQTTPacketInfo_t * pxIncomingPacket,
  * @param[in] pxPublishInfo is a pointer to structure containing deserialized
  * Publish message.
  */
-static void prvMQTTProcessIncomingPublish( MQTTPublishInfo_t * pxPublishInfo );
+static void prvMQTTProcessIncomingPublish( MQTTContext_t * pxMQTTContext, MQTTPublishInfo_t * pxPublishInfo );
 
 /**
  * @brief The application callback function for getting the incoming publishes,
@@ -410,6 +410,8 @@ static MQTTPubAckInfo_t pIncomingPublishRecords[ mqttexampleINCOMING_PUBLISH_REC
 
 /*-----------------------------------------------------------*/
 
+static app_data_handle_t *app_data;
+
 /*
  * @brief The Example shown below uses MQTT APIs to create MQTT messages and
  * send them over the server-authenticated network connection established with the
@@ -426,6 +428,8 @@ void MQTTtask( void * pvParameters )
 {
     MQTTContext_t xMQTTContext = { 0 };
     esp8266TransportStatus_t xNetworkStatus;
+
+    app_data = (app_data_handle_t*) pvParameters;
 
     /* Set the entry time of the demo application. This entry time will be used
      * to calculate relative time elapsed in the execution of the demo application,
@@ -452,21 +456,17 @@ void MQTTtask( void * pvParameters )
 
     for( ; ; )
     {
-//        digitalIOToggle(mLED);
 
-        if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(10000))) {
+#ifdef  DEBUG_LED
+        digitalIOToggle(mLED);
+#endif
 
-            /**************************** Publish and Keep-Alive Loop. ******************************/
-
-            /* Publish messages with QoS2, and send and process keep-alive messages. */
-            prvMQTTPublishToTopics( &xMQTTContext, ((app_data_handle_t*) pvParameters)->sensor_read );
-
-            /* Process incoming publish echo. Since the application subscribed and published
-             * to the same topic, the broker will send the incoming publish message back
-             * to the application. */
-            prvProcessLoopWithTimeout( &xMQTTContext, mqttexamplePROCESS_LOOP_TIMEOUT_MS );
-        }
         prvProcessLoopWithTimeout(&xMQTTContext, mqttexamplePROCESS_LOOP_TIMEOUT_MS); 
+        if( ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(2000)) )
+        {
+            /* Publish messages with QoS2, and send and process keep-alive messages. */
+            prvMQTTPublishToTopics( &xMQTTContext );
+        }
     }
 }
 /*-----------------------------------------------------------*/
@@ -633,11 +633,10 @@ static void prvMQTTSubscribeWithBackoffRetries( MQTTContext_t * pxMQTTContext )
 }
 /*-----------------------------------------------------------*/
 
-static void prvMQTTPublishToTopics( MQTTContext_t *pxMQTTContext, hcsr04_data_t data )
+static void prvMQTTPublishToTopics( MQTTContext_t *pxMQTTContext )
 {
     MQTTStatus_t xResult;
     MQTTPublishInfo_t xMQTTPublishInfo;
-    uint32_t ulTopicCount;
     //char msg[5];
 
     /***
@@ -647,27 +646,23 @@ static void prvMQTTPublishToTopics( MQTTContext_t *pxMQTTContext, hcsr04_data_t 
 
     //snprintf(msg, 5, "%u", data);
 
-    for( ulTopicCount = 0; ulTopicCount < mqttexampleTOPIC_COUNT; ulTopicCount++ )
-    {
-        /* Some fields are not used by this demo so start with everything at 0. */
-        ( void ) memset( ( void * ) &xMQTTPublishInfo, 0x00, sizeof( xMQTTPublishInfo ) );
+    /* Some fields are not used by this demo so start with everything at 0. */
+    ( void ) memset( ( void * ) &xMQTTPublishInfo, 0x00, sizeof( xMQTTPublishInfo ) );
 
-        /* This demo uses QoS2 */
-        xMQTTPublishInfo.qos = MQTTQoS2;
-        xMQTTPublishInfo.retain = false;
-        xMQTTPublishInfo.pTopicName = mqttexampleTX_TOPIC_PREFIX;
-        xMQTTPublishInfo.topicNameLength = ( uint16_t ) strlen( xMQTTPublishInfo.pTopicName );
-        xMQTTPublishInfo.pPayload = &data;
-        xMQTTPublishInfo.payloadLength = sizeof(data);
+    /* This demo uses QoS2 */
+    xMQTTPublishInfo.qos = MQTTQoS2;
+    xMQTTPublishInfo.retain = false;
+    xMQTTPublishInfo.pTopicName = mqttexampleTX_TOPIC_PREFIX;
+    xMQTTPublishInfo.topicNameLength = ( uint16_t ) strlen( xMQTTPublishInfo.pTopicName );
+    xMQTTPublishInfo.pPayload = &(app_data->sensor_read);
+    xMQTTPublishInfo.payloadLength = sizeof(hcsr04_data_t);
 
-        /* Get a unique packet id. */
-        usPublishPacketIdentifier = MQTT_GetPacketId( pxMQTTContext );
+    /* Get a unique packet id. */
+    usPublishPacketIdentifier = MQTT_GetPacketId( pxMQTTContext );
 
-        //LogInfo( ( "Publishing to the MQTT topic %s.\r\n", xTopicFilterContext[ ulTopicCount ].pcTopicFilter ) );
-        /* Send PUBLISH packet. */
-        xResult = MQTT_Publish( pxMQTTContext, &xMQTTPublishInfo, usPublishPacketIdentifier );
-        configASSERT( xResult == MQTTSuccess );
-    }
+    /* Send PUBLISH packet. */
+    xResult = MQTT_Publish( pxMQTTContext, &xMQTTPublishInfo, usPublishPacketIdentifier );
+    configASSERT( xResult == MQTTSuccess );
 }
 /*-----------------------------------------------------------*/
 
@@ -710,8 +705,6 @@ static void prvMQTTUnsubscribeFromTopics( MQTTContext_t * pxMQTTContext )
 static void prvMQTTProcessResponse( MQTTPacketInfo_t * pxIncomingPacket,
                                     uint16_t usPacketId )
 {
-    uint32_t ulTopicCount = 0U;
-
     switch( pxIncomingPacket->type )
     {
         case MQTT_PACKET_TYPE_PUBACK:
@@ -761,49 +754,32 @@ static void prvMQTTProcessResponse( MQTTPacketInfo_t * pxIncomingPacket,
 
 /*-----------------------------------------------------------*/
 
-static void prvMQTTProcessIncomingPublish( MQTTPublishInfo_t * pxPublishInfo )
+static void prvMQTTProcessIncomingPublish( MQTTContext_t * pxMQTTContext, MQTTPublishInfo_t * pxPublishInfo )
 {
-#if 0
-    uint32_t ulTopicCount;
-    BaseType_t xTopicFound = pdFALSE;
-
     configASSERT( pxPublishInfo != NULL );
 
-    /* Process incoming Publish. */
-    //LogInfo( ( "Incoming QoS : %d\n", pxPublishInfo->qos ) );
-
     /* Verify the received publish is for one of the topics that's been subscribed to. */
-    for( ulTopicCount = 0; ulTopicCount < mqttexampleTOPIC_COUNT; ulTopicCount++ )
+    if( ( pxPublishInfo->topicNameLength == strlen( xTopicFilterContext[0].pcTopicFilter ) ) &&
+        ( strncmp( xTopicFilterContext[0].pcTopicFilter, pxPublishInfo->pTopicName, pxPublishInfo->topicNameLength ) == 0 ) )
     {
-        if( ( pxPublishInfo->topicNameLength == strlen( xTopicFilterContext[ ulTopicCount ].pcTopicFilter ) ) &&
-            ( strncmp( xTopicFilterContext[ ulTopicCount ].pcTopicFilter, pxPublishInfo->pTopicName, pxPublishInfo->topicNameLength ) == 0 ) )
+        /* Verify the message received matches expected commands */
+
+        if( strncmp( "ON", ( const char * ) ( pxPublishInfo->pPayload ), pxPublishInfo->payloadLength ) == 0 )
         {
-            xTopicFound = pdTRUE;
-            break;
+            digitalIOSet(mLED_0, pdTRUE);
+        }
+
+        else if( strncmp( "OFF", ( const char * ) ( pxPublishInfo->pPayload ), pxPublishInfo->payloadLength ) == 0 )
+        {
+            digitalIOSet(mLED_0, pdFALSE);
+        }
+
+        else if( strncmp( "UPDATE", ( const char * ) ( pxPublishInfo->pPayload ), pxPublishInfo->payloadLength ) == 0 )
+        {
+            /* Activate sensor task to get a new read */
+            xTaskNotifyGive(app_data->sensor_task);
         }
     }
-
-    if( xTopicFound == pdTRUE )
-    {
-        LogInfo( ( "\r\nIncoming Publish Topic Name: %.*s matches a subscribed topic.\r\n",
-                   pxPublishInfo->topicNameLength,
-                   pxPublishInfo->pTopicName ) );
-    }
-    else
-    {
-        LogError( ( "Incoming Publish Topic Name: %.*s does not match a subscribed topic.\r\n",
-                    pxPublishInfo->topicNameLength,
-                    pxPublishInfo->pTopicName ) );
-    }
-
-    /* Verify the message received matches the message sent. */
-    if( strncmp( mqttexampleMESSAGE, ( const char * ) ( pxPublishInfo->pPayload ), pxPublishInfo->payloadLength ) != 0 )
-    {
-        //LogError( ( "Incoming Publish Message: %.*s does not match Expected Message: %s.\r\n",
-        //            pxPublishInfo->topicNameLength,
-        //            pxPublishInfo->pTopicName, mqttexampleMESSAGE ) );
-    }
-#endif
 }
 
 /*-----------------------------------------------------------*/
@@ -817,7 +793,7 @@ static void prvEventCallback( MQTTContext_t * pxMQTTContext,
 
     if( ( pxPacketInfo->type & 0xF0U ) == MQTT_PACKET_TYPE_PUBLISH )
     {
-        prvMQTTProcessIncomingPublish( pxDeserializedInfo->pPublishInfo );
+        prvMQTTProcessIncomingPublish( pxMQTTContext, pxDeserializedInfo->pPublishInfo );
     }
     else
     {

@@ -296,7 +296,7 @@ void rxThread(void *args) {
     //Very ugly code, but it works...
     //Keep running forever!!! Tasks cannot return!!!
     for(;;) {
-        digitalIOToggle(mLED);
+//        digitalIOToggle(mLED);
         if (xSerialGetChar(NULL, (signed char*) &c[0], RX_BLOCK)) {
             if (c[0] == '+') {
                 while(!xSerialGetChar(NULL, (signed char*) &c[1], RX_BLOCK));

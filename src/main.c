@@ -23,9 +23,9 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "app_data_types.h"
-#include "mqtt_task.h"
-#include "hcsr04_task.h"
 #include "transport_esp8266.h"
+#include "hcsr04_task.h"
+#include "mqtt_task.h"
 #include "drivers/digital_io.h"
 
 /* Tasks' priority definitions */
@@ -34,13 +34,13 @@
 #define mHCSR04_PRIORITY            (tskIDLE_PRIORITY + 2)
 
 /* Tasks' StackSize definitions: minimal size + guard */
-#define mMQTT_STACK_SIZE            325 + 8
+#define mMQTT_STACK_SIZE            323 + 8
 #define m8266RX_STACK_SIZE          96  + 8
-#define mHCSR04_STACK_SIZE          52  + 8
+#define mHCSR04_STACK_SIZE          50  + 8
 
 static app_data_handle_t app_data;
 
-void vApplicationIdleHook(void);
+void vApplicationIdleHook(void); //not used in this app
 
 short main(void) {
 
@@ -53,14 +53,16 @@ short main(void) {
         for (;;) {}
     }
 
-    /*  Create MQTT task */
-    if (xTaskCreate(MQTTtask, "MQTT", mMQTT_STACK_SIZE, &app_data, mMQTT_PRIORITY, &(app_data.mqtt_task)) != pdPASS) {
+    /* Create HCSR-04 task */
+    if (xTaskCreate(hcsr04Task, "HCSR", mHCSR04_STACK_SIZE, &app_data,
+                    mHCSR04_PRIORITY, &(app_data.sensor_task)) != pdPASS) {
         digitalIOSet(mERROR_LED, pdTRUE);
         for (;;) {}
     }
 
-    /* Create HCSR-04 task */
-    if (xTaskCreate(hcsr04Task, "HCSR", mHCSR04_STACK_SIZE, &app_data, mHCSR04_PRIORITY, NULL) != pdPASS) {
+    /*  Create MQTT task */
+    if (xTaskCreate(MQTTtask, "MQTT", mMQTT_STACK_SIZE, &app_data,
+                    mMQTT_PRIORITY, &(app_data.mqtt_task)) != pdPASS) {
         digitalIOSet(mERROR_LED, pdTRUE);
         for (;;) {}
     }

@@ -28,7 +28,7 @@
 #include "hcsr04_task.h"
 #include "drivers/digital_io.h"
 
-#define mLED                            mLED_2 //Debugging LED, PORTD bit 4;
+#define mLED                            mLED_HCSR04
 #define TRIG_PIN                        6      //PORTB bit 4;
 #define ECHO_PIN                        0x01   //PORTB bit 0;
 
@@ -40,24 +40,28 @@ void hcsr04Task(void *pvParameters) {
     unsigned int timeout;
 
     for (;;) {
-        interval = 0;
-        timeout = 0;
-//        digitalIOToggle(mLED);
-        digitalIOSet(TRIG_PIN, pdTRUE);
-        delayMicrosecond(8);
-        digitalIOSet(TRIG_PIN, pdFALSE);
-        while(!(PINB & ECHO_PIN) && (timeout < 0xffff)) {
-            timeout++;
+        if (ulTaskNotifyTake(pdTRUE, portMAX_DELAY)) {
+            interval = 0;
+            timeout = 0;
+
+#ifdef      DEBUG_LED
+            digitalIOToggle(mLED);
+#endif
+            digitalIOSet(TRIG_PIN, pdTRUE);
+            delayMicrosecond(8);
+            digitalIOSet(TRIG_PIN, pdFALSE);
+            while(!(PINB & ECHO_PIN) && (timeout < 0xffff)) {
+                timeout++;
+            }
+            while((PINB & ECHO_PIN) && (interval < 0xffff)) {
+                interval++;
+            }
+            //Correction factor for while conditional. Consumes 8 CPU clock every interation.
+            //16 CPU clocks eqs 1us
+            interval = interval / 2;
+            ((app_data_handle_t*) pvParameters)->sensor_read = interval;
+            xTaskNotifyGive(((app_data_handle_t*) pvParameters)->mqtt_task);
         }
-        while((PINB & ECHO_PIN) && (interval < 0xffff)) {
-            interval++;
-        }
-        //Correction factor for while conditional. Consumes 8 CPU clock every interation.
-        //16 CPU clocks eqs 1us
-        interval = interval / 2;
-        ((app_data_handle_t*) pvParameters)->sensor_read = interval;
-        xTaskNotifyGive(((app_data_handle_t*) pvParameters)->mqtt_task);
-        vTaskDelay(pdMS_TO_TICKS(3000));
     }
 }
 /*-----------------------------------------------------------*/

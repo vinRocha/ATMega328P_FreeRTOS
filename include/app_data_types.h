@@ -35,7 +35,8 @@ typedef unsigned int hcsr04_data_t;
 
 typedef struct app_data_handle  {
     hcsr04_data_t sensor_read; //data measured by hcsr04_task
-    TaskHandle_t mqtt_task; //mqtt task handle to signal data is ready
+    TaskHandle_t sensor_task; //hcsr04 task handle to signal to make new measurement
+    TaskHandle_t mqtt_task;   //mqtt task handle to signal measureament is ready
 } app_data_handle_t;
 
 #ifdef __cplusplus
