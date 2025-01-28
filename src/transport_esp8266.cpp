@@ -28,7 +28,6 @@
 #include <string.h>
 #include "transport_esp8266.h"
 #include "FreeRTOS.h"
-//#include "hcsr04.h"
 #include "task.h"
 #include "queue.h"
 #include "drivers/serial.h"
@@ -40,7 +39,7 @@
 #define TX_BLOCK                        portMAX_DELAY
 #define RX_BLOCK                        portMAX_DELAY
 
-#define mLED                            mLED_1
+#define mLED                            mLED_8266RX
 
 //constants
 const unsigned long BAUD_RATE =         115200;
@@ -296,7 +295,10 @@ void rxThread(void *args) {
     //Very ugly code, but it works...
     //Keep running forever!!! Tasks cannot return!!!
     for(;;) {
-//        digitalIOToggle(mLED);
+
+#ifdef  DEBUG_LED
+        digitalIOToggle(mLED);
+#endif
         if (xSerialGetChar(NULL, (signed char*) &c[0], RX_BLOCK)) {
             if (c[0] == '+') {
                 while(!xSerialGetChar(NULL, (signed char*) &c[1], RX_BLOCK));
@@ -322,8 +324,6 @@ void rxThread(void *args) {
                                     while(!xSerialGetChar(NULL, (signed char*) c, RX_BLOCK));
                                     xQueueSend(dataQ, c, TX_BLOCK);
                                 }
-//                               ((hcsr04_data_t*) args)->data = uxTaskGetStackHighWaterMark2(NULL);
-//                                xTaskNotifyGive(((hcsr04_data_t*) args)->task);
                             }
                             else {
                                 send_to_controlQ(5, c);
