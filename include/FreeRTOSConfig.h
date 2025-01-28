@@ -74,18 +74,4 @@ to exclude the API function. */
 #define pdTICKS_TO_MS(x)                    ((TickType_t) portTICK_PERIOD_MS * x)
 #define mNOBLOCK                            (TickType_t) 0
 
-/* LEDs */
-#define mARDUINO_BUILTIN_LED            7 //PORTB bit 5;
-#define mLED_0                          0 //PORTD bit 2;
-#define mLED_1                          1 //PORTD bit 3;
-#define mLED_2                          2 //PORTD bit 4;
-#define mLED_3                          3 //PORTD bit 5;
-#define mERROR_LED                      mARDUINO_BUILTIN_LED
-
-/* To enable debugging LEDs, define DEBUG_LED macro below */
-/* #define DEBUG_LED */
-#define mLED_8266RX                     mLED_1
-#define mLED_HCSR04                     mLED_2
-#define mLED_MQTT                       mLED_3
-
 #endif /* FREERTOS_CONFIG_H */
