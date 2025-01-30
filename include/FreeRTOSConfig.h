@@ -42,10 +42,10 @@
 #define configUSE_IDLE_HOOK                 1
 #define configUSE_TICK_HOOK                 0
 #define configCPU_CLOCK_HZ                  ( ( unsigned long ) 16000000 )
-#define configTICK_RATE_HZ                  ( ( TickType_t ) 1000 )
+#define configTICK_RATE_HZ                  ( ( TickType_t ) 100 )
 #define configMAX_PRIORITIES                ( 3 )
 #define configMINIMAL_STACK_SIZE            ( ( unsigned short ) 80 )
-#define configTOTAL_HEAP_SIZE               ( (size_t ) ( 1014) )
+#define configTOTAL_HEAP_SIZE               ( (size_t ) ( 1024) )
 #define configMAX_TASK_NAME_LEN             ( 4 )
 #define configUSE_TRACE_FACILITY            0
 #define configUSE_16_BIT_TICKS              1
@@ -64,7 +64,7 @@ to exclude the API function. */
 #define INCLUDE_uxTaskPriorityGet           0
 #define INCLUDE_vTaskDelete                 0
 #define INCLUDE_vTaskCleanUpResources       0
-#define INCLUDE_vTaskSuspend                0
+#define INCLUDE_vTaskSuspend                1
 #define INCLUDE_vTaskDelayUntil             0
 #define INCLUDE_vTaskDelay                  1
 #define INCLUDE_uxTaskGetStackHighWaterMark2 0
@@ -72,6 +72,6 @@ to exclude the API function. */
 /* Configure pdMS_TO_TICKS and pdTICKS_TO_MS */
 #define pdMS_TO_TICKS(x)                    ((TickType_t) x / portTICK_PERIOD_MS)
 #define pdTICKS_TO_MS(x)                    ((TickType_t) portTICK_PERIOD_MS * x)
-#define mNOBLOCK                            (TickType_t) 0
+#define pdBLOCK_MS(x)                       pdMS_TO_TICKS(x)
 
 #endif /* FREERTOS_CONFIG_H */

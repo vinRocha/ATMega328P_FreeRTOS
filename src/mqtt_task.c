@@ -141,8 +141,8 @@ if (!(x)) { \
  * The topic name starts with the client identifier to ensure that each demo
  * interacts with a unique topic name.
  */
-#define mqttexampleRX_TOPIC_PREFIX                           "/home/garage/control"
-#define mqttexampleTX_TOPIC_PREFIX                           "/home/garage/state"
+#define mqttexampleRX_TOPIC_NAME                           "/home/garage/control"
+#define mqttexampleTX_TOPIC_NAME                           "/home/garage/state"
 
 /**
  * @brief The number of topic filters to subscribe.
@@ -169,7 +169,7 @@ if (!(x)) { \
  * @brief Timeout for MQTT_ProcessLoop in milliseconds.
  * Refer to FreeRTOS-Plus/Demo/coreMQTT_Windows_Simulator/readme.txt for more details.
  */
-#define mqttexamplePROCESS_LOOP_TIMEOUT_MS                ( 2000U )
+#define mqttexamplePROCESS_LOOP_TIMEOUT_MS                ( 1000U )
 
 /**
  * @brief The keep-alive timeout period reported to the broker while establishing
@@ -462,11 +462,7 @@ void MQTTtask( void * pvParameters )
 #endif
 
         prvProcessLoopWithTimeout(&xMQTTContext, mqttexamplePROCESS_LOOP_TIMEOUT_MS); 
-        if( ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(2000)) )
-        {
-            /* Publish messages with QoS2, and send and process keep-alive messages. */
-            prvMQTTPublishToTopics( &xMQTTContext );
-        }
+        vTaskDelay(pdMS_TO_TICKS(200));
     }
 }
 /*-----------------------------------------------------------*/
@@ -652,7 +648,7 @@ static void prvMQTTPublishToTopics( MQTTContext_t *pxMQTTContext )
     /* This demo uses QoS2 */
     xMQTTPublishInfo.qos = MQTTQoS2;
     xMQTTPublishInfo.retain = false;
-    xMQTTPublishInfo.pTopicName = mqttexampleTX_TOPIC_PREFIX;
+    xMQTTPublishInfo.pTopicName = mqttexampleTX_TOPIC_NAME;
     xMQTTPublishInfo.topicNameLength = ( uint16_t ) strlen( xMQTTPublishInfo.pTopicName );
     xMQTTPublishInfo.pPayload = &(app_data->sensor_read);
     xMQTTPublishInfo.payloadLength = sizeof(hcsr04_data_t);
@@ -777,7 +773,9 @@ static void prvMQTTProcessIncomingPublish( MQTTContext_t * pxMQTTContext, MQTTPu
         else if( strncmp( "UPDATE", ( const char * ) ( pxPublishInfo->pPayload ), pxPublishInfo->payloadLength ) == 0 )
         {
             /* Activate sensor task to get a new read */
-            xTaskNotifyGive(app_data->sensor_task);
+            vTaskResume(app_data->sensor_task);
+            ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+            prvMQTTPublishToTopics( pxMQTTContext );
         }
     }
 }
@@ -839,7 +837,7 @@ static MQTTStatus_t prvProcessLoopWithTimeout( MQTTContext_t * pMqttContext,
 
     /* Call MQTT_ProcessLoop multiple times a timeout happens, or
      * MQTT_ProcessLoop fails. */
-    while( ( ulCurrentTime < ulMqttProcessLoopTimeoutTime ) )
+    while( ( ulCurrentTime < ulMqttProcessLoopTimeoutTime ) || (eMqttStatus == MQTTNeedMoreBytes) )
     {
         eMqttStatus = MQTT_ProcessLoop( pMqttContext );
         ulTimeoutMs = pMqttContext->getTime();
@@ -864,7 +862,7 @@ static void prvInitializeTopicBuffers( void )
         /* Write topic strings into buffers. */
         xCharactersWritten = snprintf( xTopicFilterContext[ ulTopicCount ].pcTopicFilter,
                                        mqttexampleTOPIC_BUFFER_SIZE,
-                                       "%s", mqttexampleRX_TOPIC_PREFIX);
+                                       "%s", mqttexampleRX_TOPIC_NAME);
 
         configASSERT( xCharactersWritten >= 0 && xCharactersWritten < mqttexampleTOPIC_BUFFER_SIZE );
 

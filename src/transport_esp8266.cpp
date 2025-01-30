@@ -26,15 +26,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "transport_esp8266.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+#include "transport_esp8266.h"
 #include "drivers/serial.h"
 #include "drivers/digital_io.h"
 
 #define SLEEP                           vTaskDelay(pdMS_TO_TICKS(100))
-#define BLOCK_MS(x)                     pdMS_TO_TICKS(x)
 #define NO_BLOCK                        0x00
 #define TX_BLOCK                        portMAX_DELAY
 #define RX_BLOCK                        portMAX_DELAY
@@ -121,7 +120,7 @@ int32_t esp8266AT_recv(NetworkContext_t *pNetworkContext, void *pBuffer, size_t 
     char byte;
 
     while(bytes_read < (int32_t) bytesToRecv) {
-        if (xQueueReceive(dataQ, &byte, BLOCK_MS(10))) {
+        if (xQueueReceive(dataQ, &byte, pdBLOCK_MS(10))) {
             *((char*) pBuffer + bytes_read) = byte;
             bytes_read++;
         }
@@ -155,7 +154,7 @@ int32_t esp8266AT_send(NetworkContext_t *pNetworkContext, const void *pBuffer, s
             bytesToSend--;
         }
         //Should check for errors here... but for now, only clear control buffer.
-        while (xQueueReceive(controlQ, &c, BLOCK_MS(100)) > 0);
+        while (xQueueReceive(controlQ, &c, pdBLOCK_MS(100)) > 0);
     }
 
     snprintf(&command[11], 5, "%u", bytesToSend);
@@ -172,7 +171,7 @@ int32_t esp8266AT_send(NetworkContext_t *pNetworkContext, const void *pBuffer, s
         bytes_sent++;
     }
     //Should check for errors here... but for now, only clear control buffer.
-    while (xQueueReceive(controlQ, &c, BLOCK_MS(100)) > 0);
+    while (xQueueReceive(controlQ, &c, pdBLOCK_MS(100)) > 0);
 
     return bytes_sent;
 }
@@ -189,7 +188,7 @@ void check_AT(void) {
     xSerialPutChar(NULL, '\r', TX_BLOCK);
 
     //Clear control buffer, if anything is there
-    while (xQueueReceive(controlQ, at_cmd_response, BLOCK_MS(100)) > 0);
+    while (xQueueReceive(controlQ, at_cmd_response, pdBLOCK_MS(100)) > 0);
 
     //Complete the command
     xSerialPutChar(NULL, '\n', TX_BLOCK);
@@ -252,7 +251,7 @@ void start_TCP(const char *pHostName, const char *port) {
     xSerialPutChar(NULL, '\r', TX_BLOCK);
     xSerialPutChar(NULL, '\n', TX_BLOCK);
 
-    xQueueReceive(controlQ, &c, BLOCK_MS(100)); //C, if success
+    xQueueReceive(controlQ, &c, pdBLOCK_MS(100)); //C, if success
 
     if (c != 'C') {
         esp8266_status = ERROR;
@@ -282,7 +281,7 @@ void stop_TCP() {
     xSerialPutChar(NULL, '\r', TX_BLOCK);
     xSerialPutChar(NULL, '\n', TX_BLOCK);
     //Clear rx control buffer
-    while (xQueueReceive(controlQ, &c, BLOCK_MS(100)) > 0);
+    while (xQueueReceive(controlQ, &c, pdBLOCK_MS(100)) > 0);
     esp8266_status = RX_THREAD_INITIALIZED;
 }
 

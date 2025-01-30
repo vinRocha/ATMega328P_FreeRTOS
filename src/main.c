@@ -33,10 +33,10 @@
 #define m8266RX_PRIORITY            (tskIDLE_PRIORITY + 1)
 #define mHCSR04_PRIORITY            (tskIDLE_PRIORITY + 2)
 
-/* Tasks' StackSize definitions: minimal size + guard */
-#define mMQTT_STACK_SIZE            323 + 8
+/* Tasks' StackSize definitions: minimal size + padding */
+#define mMQTT_STACK_SIZE            348 + 8
 #define m8266RX_STACK_SIZE          96  + 8
-#define mHCSR04_STACK_SIZE          50  + 8
+#define mHCSR04_STACK_SIZE          46  + 8
 
 static app_data_handle_t app_data;
 
@@ -53,7 +53,7 @@ short main(void) {
         for (;;) {}
     }
 
-    /* Create HCSR-04 task */
+    /* Create HC-SR04 task */
     if (xTaskCreate(hcsr04Task, "HCSR", mHCSR04_STACK_SIZE, &app_data,
                     mHCSR04_PRIORITY, &(app_data.sensor_task)) != pdPASS) {
         digitalIOSet(mERROR_LED, pdTRUE);

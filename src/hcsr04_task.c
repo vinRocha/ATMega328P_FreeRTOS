@@ -40,28 +40,29 @@ void hcsr04Task(void *pvParameters) {
     unsigned int timeout;
 
     for (;;) {
-        if (ulTaskNotifyTake(pdTRUE, portMAX_DELAY)) {
-            interval = 0;
-            timeout = 0;
 
-#ifdef      DEBUG_LED
-            digitalIOToggle(mLED);
+        vTaskSuspend(NULL); //suspend until task activation;
+
+#ifdef  DEBUG_LED
+        digitalIOToggle(mLED);
 #endif
-            digitalIOSet(TRIG_PIN, pdTRUE);
-            delayMicrosecond(8);
-            digitalIOSet(TRIG_PIN, pdFALSE);
-            while(!(PINB & ECHO_PIN) && (timeout < 0xffff)) {
-                timeout++;
-            }
-            while((PINB & ECHO_PIN) && (interval < 0xffff)) {
-                interval++;
-            }
-            //Correction factor for while conditional. Consumes 8 CPU clock every interation.
-            //16 CPU clocks eqs 1us
-            interval = interval / 2;
-            ((app_data_handle_t*) pvParameters)->sensor_read = interval;
-            xTaskNotifyGive(((app_data_handle_t*) pvParameters)->mqtt_task);
+        interval = 0;
+        timeout = 0;
+
+        digitalIOSet(TRIG_PIN, pdTRUE);
+        delayMicrosecond(8);
+        digitalIOSet(TRIG_PIN, pdFALSE);
+        while(!(PINB & ECHO_PIN) && (timeout < 0xffff)) {
+            timeout++;
         }
+        while((PINB & ECHO_PIN) && (interval < 0xffff)) {
+            interval++;
+        }
+        //Correction factor for while conditional. Consumes 8 CPU clock every interation.
+        //16 CPU clocks eqs 1us
+        interval = interval / 2;
+        ((app_data_handle_t*) pvParameters)->sensor_read = interval;
+        xTaskNotifyGive(((app_data_handle_t*) pvParameters)->mqtt_task);
     }
 }
 /*-----------------------------------------------------------*/
