@@ -774,7 +774,7 @@ static void prvMQTTProcessIncomingPublish( MQTTContext_t * pxMQTTContext, MQTTPu
         {
             /* Activate sensor task to get a new read */
             vTaskResume(app_data->sensor_task);
-            ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+            ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(5000));
             prvMQTTPublishToTopics( pxMQTTContext );
         }
     }
